@@ -19,6 +19,7 @@ public class AppState : IDisposable
     public bool IsLoadingStations { get; private set; }
     public string? StationError { get; private set; }
     public string? StationStatusMessage { get; private set; }
+    public DateTime? LatestLiveDataRetrievedAtUtc { get; private set; }
 
     // --------------- search / filter ---------------
     public string SearchQuery { get; private set; } = "";
@@ -91,6 +92,7 @@ public class AppState : IDisposable
         {
             var previous = Stations.ToDictionary(s => s.Id, s => s.BikesAvailable);
             Stations = await _stationService.FetchStationsAsync();
+            LatestLiveDataRetrievedAtUtc = DateTime.UtcNow;
 
             if (Stations.Count == 0)
             {

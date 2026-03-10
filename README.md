@@ -52,6 +52,15 @@ The key is used for rate-limiting — it's a public transit API, not a secret.
 
 For GitHub Actions snapshot poller, add `DIGITRANSIT_SUBSCRIPTION_KEY` as a repository secret.
 
+## Data Sources And Attribution
+
+- Live station data comes from the Digitransit API. Digitransit states that the data is available under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The app attributes the data to Digitransit and shows the live retrieval timestamp in the UI.
+- Map tiles and map data come from [OpenStreetMap](https://www.openstreetmap.org/copyright). OpenStreetMap data is licensed under ODbL and is attributed in the map UI.
+
+## License
+
+The source code in this repository is licensed under the [MIT License](LICENSE).
+
 ## Project Structure
 
 ```

@@ -1,18 +1,23 @@
 @inject AppState State
 
-<div class="search-bar">
+<div class="search-panel">
     <input type="text"
+           @ref="_inputRef"
            placeholder="Search stations..."
            value="@State.SearchQuery"
            @oninput="OnInput"
            aria-label="Search stations by name or address" />
     @if (!string.IsNullOrEmpty(State.SearchQuery))
     {
-        <button class="fab" @onclick="Clear" title="Clear search" aria-label="Clear search">&#10005;</button>
+        <button class="search-clear-btn" @onclick="Clear" title="Clear search" aria-label="Clear search">&#10005;</button>
     }
 </div>
 
 @code {
+    [Parameter] public bool AutoFocus { get; set; }
+
+    private ElementReference _inputRef;
+
     private void OnInput(ChangeEventArgs e)
     {
         State.SetSearchQuery(e.Value?.ToString() ?? "");
@@ -21,5 +26,11 @@
     private void Clear()
     {
         State.SetSearchQuery("");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && AutoFocus)
+            await _inputRef.FocusAsync();
     }
 }

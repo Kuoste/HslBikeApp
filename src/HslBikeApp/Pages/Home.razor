@@ -1,12 +1,67 @@
 ﻿@page "/"
 @inject AppState State
 @implements IDisposable
+@using System.Globalization
 
 <PageTitle>HSL City Bikes</PageTitle>
 
 <MapView />
 
-<SearchBar />
+<div class="top-controls">
+    <div class="top-actions" role="toolbar" aria-label="Map tools">
+        <button class="top-action-btn @GetSearchButtonClass()"
+                @onclick="ToggleSearch"
+                aria-expanded="@_showSearch"
+                aria-label="Toggle search">
+            <span class="top-action-icon" aria-hidden="true">&#128269;</span>
+        </button>
+        <button class="top-action-btn @GetInfoButtonClass()"
+                @onclick="ToggleInfo"
+                aria-expanded="@_showInfo"
+                aria-label="Toggle sources and license information">
+            <span class="top-action-icon" aria-hidden="true">&#9432;</span>
+        </button>
+    </div>
+
+    @if (_showSearch)
+    {
+        <div class="floating-panel search-popover">
+            <div class="floating-panel-header">
+                <h2>Search stations</h2>
+                <button class="panel-close-btn" @onclick="CloseSearch" aria-label="Close search">&#10005;</button>
+            </div>
+            <SearchBar AutoFocus="true" />
+        </div>
+    }
+
+    @if (_showInfo)
+    {
+        <section class="floating-panel info-popover" aria-label="Sources and license information">
+            <div class="floating-panel-header">
+                <h2>Sources and license</h2>
+                <button class="panel-close-btn" @onclick="CloseInfo" aria-label="Close sources and license">&#10005;</button>
+            </div>
+            <div class="attribution-body">
+                <p>
+                    Live station data: <a href="https://digitransit.fi/en/developers/apis/7-terms-of-use/" target="_blank" rel="noopener noreferrer">Digitransit</a>
+                    under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>.
+                    Attribution: © Digitransit.
+                    @if (State.LatestLiveDataRetrievedAtUtc is DateTime retrievedAt)
+                    {
+                        <span>Retrieved @FormatUtc(retrievedAt).</span>
+                    }
+                </p>
+                <p>
+                    Map tiles and map data: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>,
+                    licensed under ODbL.
+                </p>
+                <p>
+                    The application source code is licensed under the <a href="https://opensource.org/license/mit" target="_blank" rel="noopener noreferrer">MIT License</a>.
+                </p>
+            </div>
+        </section>
+    }
+</div>
 
 <div class="fab-group">
     <LayerControl />
@@ -54,6 +109,10 @@
 
 @code {
     private bool _showDetail;
+    private bool _showSearch;
+    private bool _showInfo;
+
+    private bool HasActiveSearch => !string.IsNullOrWhiteSpace(State.SearchQuery);
 
     protected override async Task OnInitializedAsync()
     {
@@ -72,8 +131,34 @@
         _showDetail = false;
     }
 
+    private void ToggleSearch()
+    {
+        _showSearch = !_showSearch;
+        if (_showSearch)
+            _showInfo = false;
+    }
+
+    private void ToggleInfo()
+    {
+        _showInfo = !_showInfo;
+        if (_showInfo)
+            _showSearch = false;
+    }
+
+    private void CloseSearch() => _showSearch = false;
+    private void CloseInfo() => _showInfo = false;
+
+    private string GetSearchButtonClass() =>
+        (_showSearch || HasActiveSearch) ? "active" : string.Empty;
+
+    private string GetInfoButtonClass() =>
+        _showInfo ? "active" : string.Empty;
+
     private void OnViewDetail() => _showDetail = true;
     private void OnBackFromDetail() => _showDetail = false;
+
+    private static string FormatUtc(DateTime value) =>
+        value.ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture);
 
     public void Dispose() => State.OnStateChanged -= StateHasChanged;
 }

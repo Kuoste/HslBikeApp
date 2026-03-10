@@ -8,7 +8,7 @@ window.MapInterop = {
 
     initMap: function (elementId, lat, lon, zoom, dotNetRef) {
         this._dotNetRef = dotNetRef;
-        this._map = L.map(elementId, { zoomControl: true }).setView([lat, lon], zoom);
+        this._map = L.map(elementId, { zoomControl: false }).setView([lat, lon], zoom);
         this._map.options.minZoom = 10;
         this._map.options.maxZoom = 18;
 

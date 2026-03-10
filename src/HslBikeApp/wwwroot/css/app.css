@@ -43,22 +43,103 @@ html, body {
     z-index: 0;
 }
 
-/* ===== Search bar ===== */
-.search-bar {
+/* ===== Top controls ===== */
+.top-controls {
     position: absolute;
     top: 12px;
     left: 12px;
-    right: 60px;
     z-index: 1000;
     display: flex;
-    gap: 8px;
+    flex-direction: column;
+    gap: 10px;
+    max-width: min(160px, calc(100vw - 84px));
 }
 
-.search-bar input {
+.top-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.top-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border: 1px solid color-mix(in srgb, var(--primary) 14%, var(--border));
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 2px 6px var(--shadow);
+    cursor: pointer;
+}
+
+.top-action-btn:hover {
+    background: color-mix(in srgb, var(--surface) 82%, var(--primary-light));
+}
+
+.top-action-btn.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+.top-action-icon {
+    font-size: 17px;
+    line-height: 1;
+}
+
+.floating-panel {
+    width: min(420px, calc(100vw - 24px));
+    background: color-mix(in srgb, var(--surface) 96%, var(--primary-light));
+    border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+    border-radius: 16px;
+    box-shadow: 0 8px 24px var(--shadow);
+    overflow: hidden;
+}
+
+.floating-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px 8px;
+}
+
+.floating-panel-header h2 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.panel-close-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.panel-close-btn:hover {
+    background: color-mix(in srgb, var(--surface) 70%, var(--border));
+}
+
+/* ===== Search panel ===== */
+.search-panel {
+    display: flex;
+    gap: 8px;
+    padding: 0 14px 14px;
+}
+
+.search-panel input {
     flex: 1;
+    min-width: 0;
     padding: 10px 14px;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 10px;
     background: var(--surface);
     color: var(--text);
     font-size: 14px;
@@ -66,13 +147,44 @@ html, body {
     outline: none;
 }
 
-.search-bar input:focus {
+.search-panel input:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 2px var(--primary-light);
 }
 
-.search-bar input::placeholder {
+.search-panel input::placeholder {
     color: var(--text-secondary);
+}
+
+.search-clear-btn {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    box-shadow: 0 2px 6px var(--shadow);
+}
+
+.search-clear-btn:hover {
+    background: color-mix(in srgb, var(--surface) 75%, var(--border));
+}
+
+/* ===== Attribution ===== */
+.attribution-body {
+    padding: 0 14px 14px;
+}
+
+.attribution-body p {
+    margin: 10px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.attribution-body a {
+    color: var(--primary-dark);
 }
 
 /* ===== FAB buttons ===== */
@@ -226,6 +338,7 @@ html, body {
 @media (max-width: 480px) {
     .detail-panel {
         width: 100%;
+        padding-bottom: 96px;
     }
 }
 
@@ -350,7 +463,7 @@ html, body {
     left: 12px;
     right: 12px;
     bottom: 12px;
-    z-index: 1000;
+    z-index: 1002;
     padding: 12px 14px;
     border-radius: 12px;
     box-shadow: 0 2px 8px var(--shadow);
@@ -368,6 +481,21 @@ html, body {
     background: color-mix(in srgb, var(--surface) 82%, #ffebee);
     border: 1px solid color-mix(in srgb, var(--error) 40%, var(--border));
     color: var(--error);
+}
+
+@media (max-width: 640px) {
+    .top-controls {
+        max-width: calc(100vw - 76px);
+    }
+
+    .floating-panel {
+        width: min(340px, calc(100vw - 24px));
+    }
+
+    .info-panel {
+        max-height: 35vh;
+        padding-bottom: 24px;
+    }
 }
 
 /* ===== Loading ===== */
