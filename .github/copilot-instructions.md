@@ -65,6 +65,13 @@ Basic station view is never blocked by the aggregator. See `docs/adr/001-azure-f
 - `ReadFromJsonAsync<T>()` for JSON deserialization.
 - No direct HSL API calls from the frontend — always go through the aggregator.
 
+## Development Workflow
+
+- Use a **branch-per-issue** workflow for development.
+- Create tests for existing functionality later (not immediately).
+- Utilize **Architecture Decision Records (ADRs)** to document significant architectural decisions.
+- Implement **pre-commit hooks** to enforce coding standards and run tests before commits.
+
 ## Planned Features
 
 - **User geolocation**: show user's position on the map, sort/filter stations by proximity.
