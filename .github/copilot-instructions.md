@@ -49,6 +49,7 @@ Basic station view is never blocked by the aggregator. See `docs/adr/001-azure-f
 - `BikeStation` — id, name, lat/lon, capacity, bikesAvailable, spacesAvailable, isActive
 - `StationSnapshot` — timestamp + dictionary of stationId → bikeCount
 - `StationHistory` — departure/arrival station pair, tripCount, avg duration/distance
+- `HourlyAvailability` — hour (0-23) + averageBikesAvailable
 
 ## Frontend Architecture (this repo)
 
@@ -62,19 +63,23 @@ Basic station view is never blocked by the aggregator. See `docs/adr/001-azure-f
 - Records for immutable data models, classes for services and state.
 - File-scoped namespaces, nullable enabled, implicit usings.
 - Services return empty collections (never null) on failure.
-- `ReadFromJsonAsync<T>()` for JSON deserialization.
+- `ReadFromJsonAsync<T>()` for JSON deserialisation.
 - No direct HSL API calls from the frontend — always go through the aggregator.
+- Use British English consistently in identifiers, including component, method, variable, parameter, and local naming where practical, while preserving required external API, framework, library, and contract names.
 
-## Development Workflow
+## Delivery Workflow
 
-- Use a **branch-per-issue** workflow for development.
-- Create tests for existing functionality later (not immediately).
-- Utilize **Architecture Decision Records (ADRs)** to document significant architectural decisions.
-- Implement **pre-commit hooks** to enforce coding standards and run tests before commits.
+- Keep implementation work tied to an open GitHub issue.
+- Use an issue branch named `issue-<number>-<short-description>` for delivery.
+- If an issue was closed before its code was pushed, reopen the issue before continuing work.
+- Add or update automated tests for each delivered behaviour or repository-level configuration change.
+- Run `dotnet build hsl-bike-app.slnx` and the relevant tests before considering the issue complete.
+- Do not treat an issue as done until the branch is pushed, the pull request is open, and CI is passing.
+- Explicitly link pull requests to their GitHub issue using closing keywords such as `Closes #<issue>` to ensure the issue is automatically closed when the PR is merged.
+- Document significant architectural decisions as ADRs under `docs/adr/`.
+- Pre-commit hooks in `.githooks/` enforce coding standards; ensure they pass before pushing.
 
-## Planned Features
+## Language Preferences
 
-- **User geolocation**: show user's position on the map, sort/filter stations by proximity.
-- **Cycle lane layer revision**: replace current Yleiskaava main route data with actual up-to-date cycle infrastructure from Helsinki WFS, with smart rendering for large datasets.
-- **Hourly availability graph**: click a station to see typical bike counts throughout the day.
-- **Popular destinations**: show where people typically ride to from a given station.
+- Use British English consistently in responses, code comments, documentation, commit and pull request text, and GitHub content.
+- Avoid non-English or stray foreign text in responses.
