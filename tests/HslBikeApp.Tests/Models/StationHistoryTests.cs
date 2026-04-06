@@ -41,6 +41,19 @@ public class StationHistoryTests
     }
 
     [Fact]
+    public void AverageDurationFormatted_WhenDurationHasFraction_TruncatesToWholeMinutes()
+    {
+        var h = new StationHistory
+        {
+            DepartureStationId = "1",
+            ArrivalStationId = "2",
+            AverageDurationSeconds = 89.9
+        };
+
+        Assert.Equal("1 min", h.AverageDurationFormatted);
+    }
+
+    [Fact]
     public void DefaultValues()
     {
         var h = new StationHistory
@@ -50,6 +63,6 @@ public class StationHistoryTests
         };
         Assert.Equal("", h.ArrivalStationName);
         Assert.Equal(0, h.TripCount);
-        Assert.Equal(0, h.AverageDistanceMetres);
+        Assert.Equal(0d, h.AverageDistanceMetres);
     }
 }

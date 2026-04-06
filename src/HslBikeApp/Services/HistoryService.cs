@@ -17,7 +17,7 @@ public class HistoryService
 
     public async Task<List<StationHistory>> FetchHistoryAsync(string stationId)
     {
-        var url = $"{_baseUrl}/stations/{Uri.EscapeDataString(stationId)}.json";
+        var url = $"{_baseUrl}/api/stations/{Uri.EscapeDataString(stationId)}/destinations";
 
         HttpResponseMessage response;
         try

@@ -7,23 +7,19 @@ namespace HslBikeApp.Services;
 public class SnapshotService
 {
     private readonly HttpClient _http;
-    private readonly string _snapshotUrl;
+    private readonly string _baseUrl;
 
-    public SnapshotService(HttpClient http, string snapshotUrl)
+    public SnapshotService(HttpClient http, string baseUrl)
     {
         _http = http;
-        _snapshotUrl = snapshotUrl;
+        _baseUrl = baseUrl.TrimEnd('/');
     }
 
-    /// Fetch pre-built snapshots from GitHub Pages (created by the Actions poller).
     public async Task<List<StationSnapshot>> FetchSnapshotsAsync()
     {
         try
         {
-            var response = await _http.GetAsync(_snapshotUrl);
-            if (response.StatusCode == HttpStatusCode.NotFound)
-                return [];
-
+            var response = await _http.GetAsync($"{_baseUrl}/api/snapshots");
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<List<StationSnapshot>>() ?? [];
         }

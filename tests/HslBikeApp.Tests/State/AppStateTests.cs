@@ -15,40 +15,14 @@ public class AppStateTests
         var stationHandler = new MockHttpHandler();
         if (stations is not null)
         {
-            var stationJson = JsonSerializer.Serialize(new
+            var stationJson = JsonSerializer.Serialize(stations, new JsonSerializerOptions
             {
-                data = new
-                {
-                    vehicleRentalStations = stations.Select(s => new
-                    {
-                        stationId = s.Id,
-                        name = s.Name,
-                        lat = s.Latitude,
-                        lon = s.Longitude,
-                        capacity = s.Capacity,
-                        allowPickup = s.IsActive,
-                        allowDropoff = true,
-                        availableVehicles = new
-                        {
-                            byType = new[]
-                            {
-                                new { count = s.BikesAvailable }
-                            }
-                        },
-                        availableSpaces = new
-                        {
-                            byType = new[]
-                            {
-                                new { count = s.SpacesAvailable }
-                            }
-                        }
-                    })
-                }
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
-            stationHandler.SetResponse("gtfs/v1", stationJson);
+            stationHandler.SetResponse("/api/stations", stationJson);
         }
 
-        var stationService = new StationService(new HttpClient(stationHandler) { BaseAddress = new Uri("https://test.local/") });
+        var stationService = new StationService(new HttpClient(stationHandler) { BaseAddress = new Uri("https://test.local/") }, "https://test.local");
         var historyService = new HistoryService(new HttpClient(new MockHttpHandler()), "https://test.local");
         var cycleLaneService = new CycleLaneService(new HttpClient(new MockHttpHandler()));
 
@@ -60,7 +34,7 @@ public class AppStateTests
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             }));
         }
-        var snapshotService = new SnapshotService(new HttpClient(snapshotHandler) { BaseAddress = new Uri("https://test.local/") }, "https://test.local/snapshots.json");
+        var snapshotService = new SnapshotService(new HttpClient(snapshotHandler) { BaseAddress = new Uri("https://test.local/") }, "https://test.local");
 
         return new AppState(stationService, historyService, cycleLaneService, snapshotService);
     }
@@ -184,7 +158,7 @@ public class AppStateTests
     }
 
     [Fact]
-    public async Task LoadStationsAsync_PopulatesStations_FromGraphQlResponse()
+    public async Task LoadStationsAsync_PopulatesStations_FromAggregatorResponse()
     {
         var stations = new List<BikeStation>
         {
