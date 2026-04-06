@@ -8,26 +8,17 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// Configuration
 var config = builder.Configuration;
-var apiKey = config["DigitransitSubscriptionKey"] ?? "";
-var aggregatorBaseUrl = config["AggregatorBaseUrl"] ?? "https://kuoste.github.io/hsl-bike-data-aggregator";
-var snapshotUrl = config["SnapshotUrl"];
-if (string.IsNullOrEmpty(snapshotUrl))
-    snapshotUrl = $"{builder.HostEnvironment.BaseAddress}data/snapshots.json";
+var aggregatorBaseUrl = config["AggregatorBaseUrl"];
+if (string.IsNullOrWhiteSpace(aggregatorBaseUrl))
+    aggregatorBaseUrl = "https://kuoste.github.io/hsl-bike-data-aggregator";
 
-// HttpClient with Digitransit API key
-var digitransitHttp = new HttpClient();
-if (!string.IsNullOrEmpty(apiKey))
-    digitransitHttp.DefaultRequestHeaders.Add("digitransit-subscription-key", apiKey);
-
-// Plain HttpClient for other services
 var plainHttp = new HttpClient();
 
-builder.Services.AddSingleton(new StationService(digitransitHttp));
+builder.Services.AddSingleton(new StationService(plainHttp, aggregatorBaseUrl));
 builder.Services.AddSingleton(new HistoryService(plainHttp, aggregatorBaseUrl));
 builder.Services.AddSingleton(new CycleLaneService(plainHttp));
-builder.Services.AddSingleton(new SnapshotService(plainHttp, snapshotUrl));
+builder.Services.AddSingleton(new SnapshotService(plainHttp, aggregatorBaseUrl));
 builder.Services.AddSingleton<AppState>();
 
 await builder.Build().RunAsync();

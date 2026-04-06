@@ -7,7 +7,11 @@ public record BikeStation
     public required string Id { get; init; }
     public required string Name { get; init; }
     public string Address { get; init; } = "";
+
+    [JsonPropertyName("lat")]
     public double Latitude { get; init; }
+
+    [JsonPropertyName("lon")]
     public double Longitude { get; init; }
     public int Capacity { get; init; }
     public int BikesAvailable { get; init; }

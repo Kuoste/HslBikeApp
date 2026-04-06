@@ -5,7 +5,7 @@ echo "Running pre-commit checks..."
 
 # Build the solution
 echo "Building solution..."
-dotnet build hsl-bike-app.slnx --configuration Release --verbosity quiet
+dotnet build HslBikeApp.slnx --configuration Release --verbosity quiet
 if [ $? -ne 0 ]; then
     echo "❌ Build failed. Commit aborted."
     exit 1
@@ -13,7 +13,7 @@ fi
 
 # Run tests
 echo "Running tests..."
-dotnet test hsl-bike-app.slnx --no-build --configuration Release --verbosity quiet
+dotnet test HslBikeApp.slnx --no-build --configuration Release --verbosity quiet
 if [ $? -ne 0 ]; then
     echo "❌ Tests failed. Commit aborted."
     exit 1

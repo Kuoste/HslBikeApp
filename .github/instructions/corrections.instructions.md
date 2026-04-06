@@ -27,3 +27,9 @@ Copilot should follow these rules to avoid repeating mistakes.
 
 - Blazor WASM apps hosted on GitHub Pages require `<base href>` to match the repository name path (e.g., `/HslBikeApp/`).
 - When renaming a repo, update the base href in `wwwroot/index.html` accordingly.
+
+## JSON Serialisation
+
+- `ReadFromJsonAsync<T>()` uses camelCase by default, which matches the aggregator API.
+- When C# property names differ from JSON keys (e.g., `Latitude` vs `lat`), add `[JsonPropertyName("lat")]` — do not rely on naming conventions alone.
+- Always verify the model properties match the documented API response shape before deserialising.
