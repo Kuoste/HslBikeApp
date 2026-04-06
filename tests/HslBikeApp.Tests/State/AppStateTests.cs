@@ -10,7 +10,8 @@ public class AppStateTests
 {
     private static AppState CreateAppState(
         List<BikeStation>? stations = null,
-        List<StationSnapshot>? snapshots = null)
+        List<StationSnapshot>? snapshots = null,
+        List<HourlyAvailability>? availability = null)
     {
         var stationHandler = new MockHttpHandler();
         if (stations is not null)
@@ -24,6 +25,15 @@ public class AppStateTests
 
         var stationService = new StationService(new HttpClient(stationHandler) { BaseAddress = new Uri("https://test.local/") }, "https://test.local");
         var historyService = new HistoryService(new HttpClient(new MockHttpHandler()), "https://test.local");
+        var availabilityHandler = new MockHttpHandler();
+        if (availability is not null)
+        {
+            availabilityHandler.SetResponse("/availability", JsonSerializer.Serialize(availability, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            }));
+        }
+        var availabilityService = new AvailabilityService(new HttpClient(availabilityHandler) { BaseAddress = new Uri("https://test.local/") }, "https://test.local");
         var cycleLaneService = new CycleLaneService(new HttpClient(new MockHttpHandler()));
 
         var snapshotHandler = new MockHttpHandler();
@@ -36,7 +46,7 @@ public class AppStateTests
         }
         var snapshotService = new SnapshotService(new HttpClient(snapshotHandler) { BaseAddress = new Uri("https://test.local/") }, "https://test.local");
 
-        return new AppState(stationService, historyService, cycleLaneService, snapshotService);
+        return new AppState(stationService, availabilityService, historyService, cycleLaneService, snapshotService);
     }
 
     [Fact]
@@ -141,9 +151,34 @@ public class AppStateTests
     public void ClearSelection_ResetsState()
     {
         var state = CreateAppState();
+        typeof(AppState).GetProperty("AvailabilityProfile")!.SetValue(state, new List<HourlyAvailability>
+        {
+            new() { Hour = 8, AverageBikesAvailable = 5.2 }
+        });
         state.ClearSelection();
         Assert.Null(state.SelectedStation);
         Assert.Empty(state.History);
+        Assert.Empty(state.AvailabilityProfile);
+    }
+
+    [Fact]
+    public async Task SelectStationAsync_PopulatesAvailabilityProfile()
+    {
+        var availability = Enumerable.Range(0, 24)
+            .Select(hour => new HourlyAvailability
+            {
+                Hour = hour,
+                AverageBikesAvailable = hour / 2.0
+            })
+            .ToList();
+
+        var state = CreateAppState(availability: availability);
+        var station = new BikeStation { Id = "001", Name = "Kamppi", Address = "Address" };
+
+        await state.SelectStationAsync(station);
+
+        Assert.Equal(24, state.AvailabilityProfile.Count);
+        Assert.False(state.IsLoadingAvailability);
     }
 
     [Fact]

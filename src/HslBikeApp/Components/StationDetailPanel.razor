@@ -1,3 +1,5 @@
+@using System.Globalization
+
 <div class="detail-panel">
     <button class="back-btn" @onclick="OnBack">&#8592; Back to map</button>
 
@@ -31,6 +33,38 @@
             <svg class="sparkline" width="200" height="40" viewBox="0 0 200 40" aria-label="Bike availability trend">
                 <polyline points="@GetSparklinePoints()" />
             </svg>
+        }
+    </div>
+
+    <div class="detail-card">
+        <h4>Typical Availability</h4>
+
+        @if (IsLoadingAvailability)
+        {
+            <div class="loading-spinner" style="width:24px;height:24px;border-width:3px;margin:12px auto;"></div>
+        }
+        else if (AvailabilityProfile.Count == 0)
+        {
+            <div class="availability-empty">No hourly availability available yet.</div>
+        }
+        else
+        {
+            <div class="availability-legend">Current hour highlighted</div>
+            <div class="availability-chart-wrapper">
+                <div class="availability-chart" role="img" aria-label="Typical bike availability by hour">
+                    @foreach (var bucket in AvailabilityProfile.OrderBy(item => item.Hour))
+                    {
+                        <div class="availability-column @(IsCurrentHour(bucket.Hour) ? "current" : string.Empty)"
+                             title="@GetAvailabilityLabel(bucket)"
+                             aria-label="@GetAvailabilityLabel(bucket)">
+                            <div class="availability-bar-track">
+                                <div class="availability-bar" style="@GetBarStyle(bucket)"></div>
+                            </div>
+                            <div class="availability-hour">@bucket.Hour.ToString("00", CultureInfo.InvariantCulture)</div>
+                        </div>
+                    }
+                </div>
+            </div>
         }
     </div>
 
@@ -84,9 +118,13 @@
     [Parameter] public required BikeStation Station { get; set; }
     [Parameter] public List<StationHistory> History { get; set; } = [];
     [Parameter] public bool IsLoadingHistory { get; set; }
+    [Parameter] public List<HourlyAvailability> AvailabilityProfile { get; set; } = [];
+    [Parameter] public bool IsLoadingAvailability { get; set; }
     [Parameter] public AvailabilityTrend Trend { get; set; }
     [Parameter] public List<int> Sparkline { get; set; } = [];
     [Parameter] public EventCallback OnBack { get; set; }
+
+    private static readonly CultureInfo InvariantCulture = CultureInfo.InvariantCulture;
 
     private string GetTrendClass() => Trend switch
     {
@@ -119,4 +157,19 @@
             $"{(i * step).ToString("0.1", System.Globalization.CultureInfo.InvariantCulture)},{(height - (double)v / max * height).ToString("0.1", System.Globalization.CultureInfo.InvariantCulture)}"
         ));
     }
+
+    private string GetBarStyle(HourlyAvailability bucket)
+    {
+        var max = AvailabilityProfile.Count == 0 ? 0 : AvailabilityProfile.Max(item => item.AverageBikesAvailable);
+        var heightPercentage = max <= 0
+            ? 6.0
+            : Math.Max(6.0, bucket.AverageBikesAvailable / max * 100.0);
+
+        return $"height: {heightPercentage.ToString("0.##", InvariantCulture)}%;";
+    }
+
+    private static bool IsCurrentHour(int hour) => DateTime.Now.Hour == hour;
+
+    private static string GetAvailabilityLabel(HourlyAvailability bucket) =>
+        $"{bucket.Hour.ToString("00", InvariantCulture)}:00 average {bucket.AverageBikesAvailable.ToString("0.0", InvariantCulture)} bikes";
 }

@@ -396,6 +396,73 @@ html, body {
     stroke-width: 2;
 }
 
+/* ===== Availability chart ===== */
+.availability-legend,
+.availability-empty {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.availability-legend {
+    margin-bottom: 10px;
+}
+
+.availability-chart-wrapper {
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.availability-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    min-width: 320px;
+    height: 160px;
+}
+
+.availability-column {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.availability-bar-track {
+    width: 100%;
+    height: 132px;
+    padding: 3px;
+    display: flex;
+    align-items: flex-end;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--surface) 78%, var(--border));
+}
+
+.availability-bar {
+    width: 100%;
+    border-radius: 7px 7px 4px 4px;
+    background: color-mix(in srgb, var(--primary) 60%, var(--primary-light));
+}
+
+.availability-hour {
+    font-size: 10px;
+    color: var(--text-secondary);
+}
+
+.availability-column.current .availability-bar-track {
+    background: color-mix(in srgb, var(--primary-light) 45%, var(--surface));
+}
+
+.availability-column.current .availability-bar {
+    background: var(--primary);
+}
+
+.availability-column.current .availability-hour {
+    color: var(--primary-dark);
+    font-weight: 700;
+}
+
 /* ===== Destination list ===== */
 .destination-list {
     list-style: none;

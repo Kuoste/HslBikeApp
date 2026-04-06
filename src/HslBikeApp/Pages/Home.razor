@@ -92,6 +92,8 @@
     <StationDetailPanel Station="State.SelectedStation"
                         History="State.History"
                         IsLoadingHistory="State.IsLoadingHistory"
+                        AvailabilityProfile="State.AvailabilityProfile"
+                        IsLoadingAvailability="State.IsLoadingAvailability"
                         Trend="@State.GetTrend(State.SelectedStation.Id)"
                         Sparkline="@State.GetSparkline(State.SelectedStation.Id)"
                         OnBack="OnBackFromDetail" />
@@ -111,12 +113,14 @@
     private bool _showDetail;
     private bool _showSearch;
     private bool _showInfo;
+    private Action? _stateChangedHandler;
 
     private bool HasActiveSearch => !string.IsNullOrWhiteSpace(State.SearchQuery);
 
     protected override async Task OnInitializedAsync()
     {
-        State.OnStateChanged += StateHasChanged;
+        _stateChangedHandler = () => _ = InvokeAsync(StateHasChanged);
+        State.OnStateChanged += _stateChangedHandler;
         await State.InitAsync();
     }
 
@@ -160,5 +164,9 @@
     private static string FormatUtc(DateTime value) =>
         value.ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture);
 
-    public void Dispose() => State.OnStateChanged -= StateHasChanged;
+    public void Dispose()
+    {
+        if (_stateChangedHandler is not null)
+            State.OnStateChanged -= _stateChangedHandler;
+    }
 }

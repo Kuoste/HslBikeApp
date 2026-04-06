@@ -6,6 +6,7 @@ namespace HslBikeApp.State;
 public class AppState : IDisposable
 {
     private readonly StationService _stationService;
+    private readonly AvailabilityService _availabilityService;
     private readonly HistoryService _historyService;
     private readonly CycleLaneService _cycleLaneService;
     private readonly SnapshotService _snapshotService;
@@ -40,6 +41,8 @@ public class AppState : IDisposable
     public BikeStation? SelectedStation { get; private set; }
     public List<StationHistory> History { get; private set; } = [];
     public bool IsLoadingHistory { get; private set; }
+    public List<HourlyAvailability> AvailabilityProfile { get; private set; } = [];
+    public bool IsLoadingAvailability { get; private set; }
 
     // --------------- cycle lanes ---------------
     public List<CycleLane> CycleLanes { get; private set; } = [];
@@ -57,11 +60,13 @@ public class AppState : IDisposable
 
     public AppState(
         StationService stationService,
+        AvailabilityService availabilityService,
         HistoryService historyService,
         CycleLaneService cycleLaneService,
         SnapshotService snapshotService)
     {
         _stationService = stationService;
+        _availabilityService = availabilityService;
         _historyService = historyService;
         _cycleLaneService = cycleLaneService;
         _snapshotService = snapshotService;
@@ -141,23 +146,58 @@ public class AppState : IDisposable
 
     public async Task SelectStationAsync(BikeStation station)
     {
+        ArgumentNullException.ThrowIfNull(station);
+
         SelectedStation = station;
         History = [];
+        AvailabilityProfile = [];
         IsLoadingHistory = true;
+        IsLoadingAvailability = true;
         NotifyStateChanged();
+
+        var historyTask = TryFetchHistoryAsync(station.Id);
+        var availabilityTask = TryFetchAvailabilityAsync(station.Id);
 
         try
         {
-            History = await _historyService.FetchHistoryAsync(station.Id);
-        }
-        catch
-        {
-            History = [];
+            var history = await historyTask;
+            var availability = await availabilityTask;
+
+            if (SelectedStation?.Id == station.Id)
+            {
+                History = history;
+                AvailabilityProfile = availability;
+            }
         }
         finally
         {
             IsLoadingHistory = false;
+            IsLoadingAvailability = false;
             NotifyStateChanged();
+        }
+    }
+
+    private async Task<List<StationHistory>> TryFetchHistoryAsync(string stationId)
+    {
+        try
+        {
+            return await _historyService.FetchHistoryAsync(stationId);
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private async Task<List<HourlyAvailability>> TryFetchAvailabilityAsync(string stationId)
+    {
+        try
+        {
+            return await _availabilityService.FetchAvailabilityAsync(stationId);
+        }
+        catch
+        {
+            return [];
         }
     }
 
@@ -165,6 +205,9 @@ public class AppState : IDisposable
     {
         SelectedStation = null;
         History = [];
+        AvailabilityProfile = [];
+        IsLoadingHistory = false;
+        IsLoadingAvailability = false;
         NotifyStateChanged();
     }
 

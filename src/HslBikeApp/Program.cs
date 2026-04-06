@@ -16,6 +16,7 @@ if (string.IsNullOrWhiteSpace(aggregatorBaseUrl))
 var plainHttp = new HttpClient();
 
 builder.Services.AddSingleton(new StationService(plainHttp, aggregatorBaseUrl));
+builder.Services.AddSingleton(new AvailabilityService(plainHttp, aggregatorBaseUrl));
 builder.Services.AddSingleton(new HistoryService(plainHttp, aggregatorBaseUrl));
 builder.Services.AddSingleton(new CycleLaneService(plainHttp));
 builder.Services.AddSingleton(new SnapshotService(plainHttp, aggregatorBaseUrl));
