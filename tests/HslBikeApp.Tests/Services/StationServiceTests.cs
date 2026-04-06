@@ -44,6 +44,8 @@ public class StationServiceTests
         Assert.True(station.IsActive);
         Assert.Equal(string.Empty, station.Address);
         Assert.Null(station.LastUpdated);
+        Assert.True(service.LastFetchSucceeded);
+        Assert.Null(service.LastErrorMessage);
     }
 
     [Fact]
@@ -77,5 +79,20 @@ public class StationServiceTests
         var stations = await service.FetchStationsAsync();
 
         Assert.Empty(stations);
+        Assert.False(service.LastFetchSucceeded);
+        Assert.Equal("Could not load live bike stations from the aggregator backend. GET https://aggregator.example/api/stations failed.", service.LastErrorMessage);
+    }
+
+    [Fact]
+    public async Task FetchStationsAsync_WhenEndpointReturnsNotFound_SetsConfigurationErrorMessage()
+    {
+        var httpClient = new HttpClient(new StubHttpMessageHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound))));
+        var service = new StationService(httpClient, "https://aggregator.example");
+
+        var stations = await service.FetchStationsAsync();
+
+        Assert.Empty(stations);
+        Assert.False(service.LastFetchSucceeded);
+        Assert.Equal("Could not load live bike stations from the aggregator backend. GET https://aggregator.example/api/stations returned 404 Not Found. Check AggregatorBaseUrl in wwwroot/appsettings.json.", service.LastErrorMessage);
     }
 }

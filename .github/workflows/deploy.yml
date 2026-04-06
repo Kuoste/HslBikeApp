@@ -39,7 +39,7 @@ jobs:
           sed -i 's|"DigitransitSubscriptionKey": ""|"DigitransitSubscriptionKey": "${{ secrets.DIGITRANSIT_SUBSCRIPTION_KEY }}"|' release/wwwroot/appsettings.json
 
       - name: Rewrite base href
-        run: sed -i 's|<base href="/hsl-bike-app/" />|<base href="/hsl-bike-app/" />|g' release/wwwroot/index.html
+        run: sed -i "s|document.querySelector('base').href = '/HslBikeApp/'|document.querySelector('base').href = '/HslBikeApp/'|g" release/wwwroot/index.html
 
       - name: Add .nojekyll
         run: touch release/wwwroot/.nojekyll

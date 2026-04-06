@@ -197,6 +197,34 @@ public class AppStateTests
         Assert.NotNull(state.StationStatusMessage);
     }
 
+    [Fact]
+    public async Task LoadStationsAsync_WhenStationEndpointFails_SetsStationError()
+    {
+        var state = CreateAppState();
+
+        await state.LoadStationsAsync();
+
+        Assert.NotNull(state.StationError);
+        Assert.Null(state.StationStatusMessage);
+        Assert.Null(state.LatestLiveDataRetrievedAtUtc);
+    }
+
+    [Fact]
+    public async Task LoadStationsAsync_WhenStationEndpointFails_PreservesExistingStations()
+    {
+        var state = CreateAppState();
+        var existingStations = new List<BikeStation>
+        {
+            new() { Id = "001", Name = "Kaivopuisto", BikesAvailable = 7 }
+        };
+        typeof(AppState).GetProperty("Stations")!.SetValue(state, existingStations);
+
+        await state.LoadStationsAsync();
+
+        Assert.Single(state.Stations);
+        Assert.Equal("Kaivopuisto", state.Stations[0].Name);
+    }
+
     /// Simple HttpMessageHandler mock for tests
     private class MockHttpHandler : HttpMessageHandler
     {

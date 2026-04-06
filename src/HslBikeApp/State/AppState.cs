@@ -91,7 +91,15 @@ public class AppState : IDisposable
         try
         {
             var previous = Stations.ToDictionary(s => s.Id, s => s.BikesAvailable);
-            Stations = await _stationService.FetchStationsAsync();
+            var latestStations = await _stationService.FetchStationsAsync();
+
+            if (!_stationService.LastFetchSucceeded)
+            {
+                StationError = _stationService.LastErrorMessage;
+                return;
+            }
+
+            Stations = latestStations;
             LatestLiveDataRetrievedAtUtc = DateTime.UtcNow;
 
             if (Stations.Count == 0)
@@ -122,7 +130,7 @@ public class AppState : IDisposable
         }
         catch (Exception ex)
         {
-            StationError = $"Could not load live bike stations from Digitransit. {ex.Message}";
+            StationError = $"Could not load live bike stations from the aggregator backend. {ex.Message}";
         }
         finally
         {
