@@ -23,7 +23,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Restore
         run: dotnet restore
@@ -34,18 +34,8 @@ jobs:
       - name: Publish
         run: dotnet publish src/HslBikeApp/HslBikeApp.csproj -c Release -o release
 
-      - name: Inject API key
-        run: |
-          sed -i 's|"DigitransitSubscriptionKey": ""|"DigitransitSubscriptionKey": "${{ secrets.DIGITRANSIT_SUBSCRIPTION_KEY }}"|' release/wwwroot/appsettings.json
-
-      - name: Rewrite base href
-        run: sed -i "s|document.querySelector('base').href = '/HslBikeApp/'|document.querySelector('base').href = '/HslBikeApp/'|g" release/wwwroot/index.html
-
       - name: Add .nojekyll
         run: touch release/wwwroot/.nojekyll
-
-      - name: Copy 404.html
-        run: cp release/wwwroot/404.html release/wwwroot/404.html 2>/dev/null || true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

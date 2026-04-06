@@ -43,16 +43,6 @@ Timer (every 2 min)          HTTP Functions (on demand)
 - **HTTP-triggered functions** read precomputed JSON from blob storage, avoiding heavy computation on each request.
 - This decouples data freshness from request latency.
 
-### Hybrid Fallback for Cold Start
-
-The frontend uses a progressive loading strategy:
-
-1. **Immediate**: Frontend fetches station data directly from HSL Digitransit (current behavior, no backend dependency).
-2. **Background**: Frontend calls the aggregator for enriched data (snapshots, trends).
-3. **Progressive**: Hourly graphs and popular destinations load when the aggregator responds.
-
-Basic station view is never blocked by the aggregator's cold start.
-
 ## Consequences
 
 ### Positive
@@ -60,7 +50,6 @@ Basic station view is never blocked by the aggregator's cold start.
 - Zero cost within Azure free tier (~21,600 timer executions + HTTP calls per month).
 - API key stays in Azure Functions app settings, never exposed to the client.
 - Sub-second HTTP responses since functions only read from blob storage.
-- Hybrid fallback ensures the app is usable even if the aggregator is cold.
 
 ### Negative
 
