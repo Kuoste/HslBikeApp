@@ -1,4 +1,4 @@
-namespace HslBikeApp.Tests.Services;
+namespace HslBikeApp.Tests;
 
 internal sealed class StubHttpMessageHandler : HttpMessageHandler
 {

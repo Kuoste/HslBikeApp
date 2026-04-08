@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using HslBikeApp;
+using HslBikeApp.Http;
 using HslBikeApp.Services;
 using HslBikeApp.State;
 
@@ -13,13 +14,14 @@ var aggregatorBaseUrl = config["AggregatorBaseUrl"];
 if (string.IsNullOrWhiteSpace(aggregatorBaseUrl))
     aggregatorBaseUrl = "https://kuoste.github.io/hsl-bike-data-aggregator";
 
-var plainHttp = new HttpClient();
+var httpClientWithHeaders = new HttpClient(new AppSourceHeaderHandler());
+var plainHttpClient = new HttpClient();
 
-builder.Services.AddSingleton(new StationService(plainHttp, aggregatorBaseUrl));
-builder.Services.AddSingleton(new AvailabilityService(plainHttp, aggregatorBaseUrl));
-builder.Services.AddSingleton(new HistoryService(plainHttp, aggregatorBaseUrl));
-builder.Services.AddSingleton(new CycleLaneService(plainHttp));
-builder.Services.AddSingleton(new SnapshotService(plainHttp, aggregatorBaseUrl));
+builder.Services.AddSingleton(new StationService(httpClientWithHeaders, aggregatorBaseUrl));
+builder.Services.AddSingleton(new AvailabilityService(httpClientWithHeaders, aggregatorBaseUrl));
+builder.Services.AddSingleton(new HistoryService(httpClientWithHeaders, aggregatorBaseUrl));
+builder.Services.AddSingleton(new CycleLaneService(plainHttpClient));
+builder.Services.AddSingleton(new SnapshotService(httpClientWithHeaders, aggregatorBaseUrl));
 builder.Services.AddSingleton<AppState>();
 
 await builder.Build().RunAsync();
