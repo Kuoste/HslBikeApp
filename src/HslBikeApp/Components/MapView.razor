@@ -1,3 +1,4 @@
+@using HslBikeApp.Helpers
 @inject AppState State
 @inject IJSRuntime JS
 @implements IAsyncDisposable
@@ -35,8 +36,7 @@
         var markers = State.FilteredStations.Select(s =>
         {
             var trend = State.GetTrend(s.Id);
-            State.BikeChanges.TryGetValue(s.Id, out var change);
-            var badge = GetBadgeText(change, trend);
+            var (badge, badgeColor) = DisplayHelpers.GetBadge(trend);
 
             return new
             {
@@ -45,9 +45,10 @@
                 lon = s.Longitude,
                 name = s.Name,
                 bikes = s.BikesAvailable,
-                spaces = s.SpacesAvailable,
-                color = GetMarkerColor(s),
-                badge
+                capacity = s.Capacity,
+                color = DisplayHelpers.GetMarkerColour(s),
+                badge,
+                badgeColor
             };
         }).ToList();
 
@@ -65,26 +66,6 @@
         {
             await JS.InvokeVoidAsync("MapInterop.clearPolylines");
         }
-    }
-
-    private static string GetMarkerColor(BikeStation s)
-    {
-        if (!s.IsActive) return "#9e9e9e";        // grey
-        if (s.BikesAvailable == 0) return "#d32f2f"; // red
-        if (s.BikesAvailable <= 3) return "#f57c00";  // orange
-        return "#388e3c";                             // green
-    }
-
-    private static string GetBadgeText(int change, AvailabilityTrend trend)
-    {
-        var parts = new List<string>();
-        if (change > 0) parts.Add($"\u2191{change}");
-        else if (change < 0) parts.Add($"\u2193{Math.Abs(change)}");
-
-        if (trend == AvailabilityTrend.RapidDecrease) parts.Add("\u2193\u2193");
-        else if (trend == AvailabilityTrend.RapidIncrease) parts.Add("\u2191\u2191");
-
-        return string.Join(" ", parts);
     }
 
     [JSInvokable]

@@ -1,3 +1,5 @@
+@using HslBikeApp.Helpers
+
 <div class="info-panel">
     <div class="drag-handle"></div>
     <div class="header">
@@ -13,31 +15,12 @@
         }
         else
         {
-            <span class="chip @(Station.BikesAvailable == 0 ? "empty" : "bikes")">
-                &#128690; @Station.BikesAvailable bikes
+            <span class="chip @DisplayHelpers.GetBikeChipClass(Station.BikesAvailable)">
+                &#128690; @Station.BikesAvailable / @Station.Capacity bikes
             </span>
-            <span class="chip @(Station.SpacesAvailable == 0 ? "empty" : "spaces")">
-                P @Station.SpacesAvailable spaces
-            </span>
-            <span class="chip capacity">&#9878; @Station.Capacity total</span>
+            <span class="chip trend-chip @DisplayHelpers.GetTrendClass(Trend)">@DisplayHelpers.GetTrendChevron(Trend)</span>
         }
     </div>
-
-    @if (BikeChange != 0)
-    {
-        <div style="font-size:13px;margin-bottom:8px;">
-            @if (BikeChange > 0)
-            {
-                <span style="color:var(--success);">&#9650; @BikeChange returned</span>
-            }
-            else
-            {
-                <span style="color:var(--error);">&#9660; @Math.Abs(BikeChange) rented</span>
-            }
-        </div>
-    }
-
-    <div class="trend @GetTrendClass()">@GetTrendText()</div>
 
     <div style="margin-top:12px;">
         <button class="btn-primary" @onclick="OnViewDetail">View trip history</button>
@@ -46,26 +29,7 @@
 
 @code {
     [Parameter] public required BikeStation Station { get; set; }
-    [Parameter] public int BikeChange { get; set; }
     [Parameter] public AvailabilityTrend Trend { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback OnViewDetail { get; set; }
-
-    private string GetTrendClass() => Trend switch
-    {
-        AvailabilityTrend.RapidDecrease => "rapid-decrease",
-        AvailabilityTrend.Decreasing => "decreasing",
-        AvailabilityTrend.Increasing => "increasing",
-        AvailabilityTrend.RapidIncrease => "rapid-increase",
-        _ => "stable"
-    };
-
-    private string GetTrendText() => Trend switch
-    {
-        AvailabilityTrend.RapidDecrease => "\u2193\u2193 Bikes decreasing rapidly",
-        AvailabilityTrend.Decreasing => "\u2193 Bikes decreasing",
-        AvailabilityTrend.Increasing => "\u2191 Bikes increasing",
-        AvailabilityTrend.RapidIncrease => "\u2191\u2191 Bikes increasing rapidly",
-        _ => "Stable"
-    };
 }

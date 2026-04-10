@@ -1,4 +1,5 @@
 @using System.Globalization
+@using HslBikeApp.Helpers
 
 <div class="detail-panel">
     <button class="back-btn" @onclick="OnBack">&#8592; Back to map</button>
@@ -16,17 +17,13 @@
             }
             else
             {
-                <span class="chip @(Station.BikesAvailable == 0 ? "empty" : "bikes")">
-                    &#128690; @Station.BikesAvailable bikes
+                <span class="chip @DisplayHelpers.GetBikeChipClass(Station.BikesAvailable)">
+                    &#128690; @Station.BikesAvailable / @Station.Capacity bikes
                 </span>
-                <span class="chip @(Station.SpacesAvailable == 0 ? "empty" : "spaces")">
-                    P @Station.SpacesAvailable spaces
-                </span>
-                <span class="chip capacity">&#9878; @Station.Capacity total</span>
             }
         </div>
 
-        <div class="trend @GetTrendClass()">@GetTrendText()</div>
+        <div class="trend @DisplayHelpers.GetTrendClass(Trend)">@DisplayHelpers.GetTrendText(Trend)</div>
 
         @if (Sparkline.Count > 1)
         {
@@ -125,24 +122,6 @@
     [Parameter] public EventCallback OnBack { get; set; }
 
     private static readonly CultureInfo InvariantCulture = CultureInfo.InvariantCulture;
-
-    private string GetTrendClass() => Trend switch
-    {
-        AvailabilityTrend.RapidDecrease => "rapid-decrease",
-        AvailabilityTrend.Decreasing => "decreasing",
-        AvailabilityTrend.Increasing => "increasing",
-        AvailabilityTrend.RapidIncrease => "rapid-increase",
-        _ => "stable"
-    };
-
-    private string GetTrendText() => Trend switch
-    {
-        AvailabilityTrend.RapidDecrease => "\u2193\u2193 Bikes decreasing rapidly",
-        AvailabilityTrend.Decreasing => "\u2193 Bikes decreasing",
-        AvailabilityTrend.Increasing => "\u2191 Bikes increasing",
-        AvailabilityTrend.RapidIncrease => "\u2191\u2191 Bikes increasing rapidly",
-        _ => "Stable"
-    };
 
     private string GetSparklinePoints()
     {

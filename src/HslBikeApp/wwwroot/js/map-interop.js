@@ -37,22 +37,26 @@ window.MapInterop = {
 
         for (const m of markers) {
             const isSelected = m.id === this._selectedId;
-            const radius = isSelected ? 14 : 10;
-            const opts = {
-                radius: radius,
-                fillColor: m.color,
-                color: isSelected ? '#000' : '#fff',
-                weight: isSelected ? 3 : 2,
-                opacity: 1,
-                fillOpacity: 0.85
-            };
+            const size = isSelected ? 32 : 26;
+            const borderWidth = isSelected ? 3 : 2;
+            const borderColor = isSelected ? '#000' : '#fff';
+            const fontSize = isSelected ? 13 : 11;
+
+            const html = `<div class="bike-marker" style="width:${size}px;height:${size}px;background:${m.color};border:${borderWidth}px solid ${borderColor};font-size:${fontSize}px;">${m.bikes}</div>` +
+                (m.badge ? `<div class="bike-badge" style="color:${m.badgeColor};">${m.badge}</div>` : '');
+
+            const icon = L.divIcon({
+                className: 'bike-marker-container',
+                html: html,
+                iconSize: [size, size + (m.badge ? 14 : 0)],
+                iconAnchor: [size / 2, size / 2]
+            });
 
             if (this._markers[m.id]) {
                 this._markers[m.id].setLatLng([m.lat, m.lon]);
-                this._markers[m.id].setStyle(opts);
-                this._markers[m.id].setRadius(radius);
+                this._markers[m.id].setIcon(icon);
             } else {
-                const marker = L.circleMarker([m.lat, m.lon], opts).addTo(this._map);
+                const marker = L.marker([m.lat, m.lon], { icon: icon }).addTo(this._map);
                 marker.on('click', (e) => {
                     L.DomEvent.stopPropagation(e);
                     if (this._dotNetRef) {
@@ -62,10 +66,10 @@ window.MapInterop = {
                 this._markers[m.id] = marker;
             }
 
-            // Tooltip with station name and bikes
+            // Tooltip with station name and availability
             this._markers[m.id].bindTooltip(
-                `<b>${m.name}</b><br>${m.bikes} bikes / ${m.spaces} spaces${m.badge ? '<br>' + m.badge : ''}`,
-                { direction: 'top', offset: [0, -10] }
+                `<b>${m.name}</b><br>\ud83d\udeb2 ${m.bikes} / ${m.capacity} bikes${m.badge ? ' <span style="font-weight:700;">' + m.badge + '</span>' : ''}`,
+                { direction: 'top', offset: [0, -size / 2 - 4] }
             );
         }
     },

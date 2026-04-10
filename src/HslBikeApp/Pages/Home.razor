@@ -81,7 +81,6 @@
 @if (State.SelectedStation is not null && !_showDetail)
 {
     <StationInfoPanel Station="State.SelectedStation"
-                      BikeChange="@GetBikeChange(State.SelectedStation.Id)"
                       Trend="@State.GetTrend(State.SelectedStation.Id)"
                       OnClose="OnClosePanel"
                       OnViewDetail="OnViewDetail" />
@@ -123,9 +122,6 @@
         State.OnStateChanged += _stateChangedHandler;
         await State.InitAsync();
     }
-
-    private int GetBikeChange(string stationId) =>
-        State.BikeChanges.TryGetValue(stationId, out var change) ? change : 0;
 
     private async Task RefreshAsync() => await State.RefreshNowAsync();
 
