@@ -212,6 +212,10 @@ public class AppState : IDisposable
     public AvailabilityTrend GetTrend(string stationId) =>
         _snapshotService.GetTrend(stationId);
 
+    /// <summary>Returns a trend summary from the snapshot service for a given station.</summary>
+    public TrendSummary GetTrendSummary(string stationId) =>
+        _snapshotService.GetTrendSummary(stationId);
+
     /// <summary>Returns sparkline data from the snapshot service for a given station.</summary>
     public List<int> GetSparkline(string stationId, int count = 12) =>
         _snapshotService.GetSparkline(stationId, count);

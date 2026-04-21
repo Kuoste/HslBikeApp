@@ -84,6 +84,14 @@ public class AppStateTests
     }
 
     [Fact]
+    public void GetTrendSummary_WhenNoSnapshots_ReturnsStableWithZeroDeltaAndWindow()
+    {
+        var state = CreateAppState();
+
+        Assert.Equal(new TrendSummary(AvailabilityTrend.Stable, 0, 0), state.GetTrendSummary("001"));
+    }
+
+    [Fact]
     public void ClearSelection_ResetsState()
     {
         var state = CreateAppState();

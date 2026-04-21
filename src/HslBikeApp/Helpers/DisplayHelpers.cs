@@ -37,15 +37,30 @@ public static class DisplayHelpers
         _ => "stable"
     };
 
-    /// <summary>Returns a short chevron symbol for the trend (info panel chip).</summary>
-    public static string GetTrendChevron(AvailabilityTrend trend) => trend switch
+    /// <summary>Returns a short arrow symbol for the trend chip, or <c>null</c> for stable.</summary>
+    public static string? GetTrendChevron(AvailabilityTrend trend) => trend switch
     {
-        AvailabilityTrend.RapidDecrease => "\u00bb\u00bb",
-        AvailabilityTrend.Decreasing => "\u00bb",
-        AvailabilityTrend.Increasing => "\u00ab",
-        AvailabilityTrend.RapidIncrease => "\u00ab\u00ab",
-        _ => "="
+        AvailabilityTrend.RapidDecrease => "\u21ca",
+        AvailabilityTrend.Decreasing => "\u2193",
+        AvailabilityTrend.Increasing => "\u2191",
+        AvailabilityTrend.RapidIncrease => "\u21c8",
+        _ => null
     };
+
+    /// <summary>Returns a human-readable explanation for the recent trend window.</summary>
+    public static string? FormatTrendExplanation(TrendSummary summary)
+    {
+        if (summary.WindowMinutes < 1)
+            return null;
+
+        if (summary.Trend == AvailabilityTrend.Stable || summary.DeltaBikes == 0)
+            return $"No change in the last {summary.WindowMinutes} min";
+
+        var magnitude = Math.Abs(summary.DeltaBikes);
+        var noun = magnitude == 1 ? "bike" : "bikes";
+        var sign = summary.DeltaBikes > 0 ? "+" : string.Empty;
+        return $"{sign}{summary.DeltaBikes} {noun} in the last {summary.WindowMinutes} min";
+    }
 
     /// <summary>Returns descriptive trend text with chevron prefix (detail panel).</summary>
     public static string GetTrendText(AvailabilityTrend trend) => trend switch

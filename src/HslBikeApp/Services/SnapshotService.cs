@@ -64,25 +64,36 @@ public class SnapshotService
     /// Derives an <see cref="AvailabilityTrend"/> for a station from recent snapshot data.
     /// Uses the last 6 data points (or all if fewer).
     /// </summary>
-    public AvailabilityTrend GetTrend(string stationId)
+    public AvailabilityTrend GetTrend(string stationId) =>
+        GetTrendSummary(stationId).Trend;
+
+    /// <summary>
+    /// Returns a trend together with the signed bike delta and analysed time window.
+    /// Uses the last 6 data points (or all if fewer).
+    /// </summary>
+    public TrendSummary GetTrendSummary(string stationId)
     {
         var counts = GetStationCounts(stationId);
         var timestamps = Timestamps;
-        if (counts.Length < 2 || timestamps.Count < 2) return AvailabilityTrend.Stable;
+        if (counts.Length < 2 || timestamps.Count < 2)
+            return new TrendSummary(AvailabilityTrend.Stable, 0, 0);
 
         var len = Math.Min(counts.Length, timestamps.Count);
         var windowSize = Math.Min(6, len);
-        var startIdx = len - windowSize;
+        var startIndex = len - windowSize;
 
-        var firstCount = counts[startIdx];
+        var firstCount = counts[startIndex];
         var lastCount = counts[len - 1];
-        var timeDiffMinutes = (timestamps[len - 1] - timestamps[startIdx]).TotalMinutes;
+        var timeDifference = timestamps[len - 1] - timestamps[startIndex];
 
-        if (timeDiffMinutes < 1) return AvailabilityTrend.Stable;
+        if (timeDifference.TotalMinutes < 1)
+            return new TrendSummary(AvailabilityTrend.Stable, 0, 0);
 
-        var ratePerMinute = (lastCount - firstCount) / timeDiffMinutes;
+        var deltaBikes = lastCount - firstCount;
+        var windowMinutes = Math.Max(1, (int)Math.Round(timeDifference.TotalMinutes, MidpointRounding.AwayFromZero));
+        var ratePerMinute = deltaBikes / timeDifference.TotalMinutes;
 
-        return ratePerMinute switch
+        var trend = ratePerMinute switch
         {
             <= -2 => AvailabilityTrend.RapidDecrease,
             <= -0.5 => AvailabilityTrend.Decreasing,
@@ -90,6 +101,8 @@ public class SnapshotService
             >= 0.5 => AvailabilityTrend.Increasing,
             _ => AvailabilityTrend.Stable
         };
+
+        return new TrendSummary(trend, deltaBikes, windowMinutes);
     }
 
     /// <summary>

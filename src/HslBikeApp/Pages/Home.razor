@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @inject AppState State
 @implements IDisposable
 @using System.Globalization
@@ -82,6 +82,7 @@
 {
     <StationInfoPanel Station="State.SelectedStation"
                       Trend="@State.GetTrend(State.SelectedStation.Id)"
+                      TrendSummary="@State.GetTrendSummary(State.SelectedStation.Id)"
                       OnClose="OnClosePanel"
                       OnViewDetail="OnViewDetail" />
 }

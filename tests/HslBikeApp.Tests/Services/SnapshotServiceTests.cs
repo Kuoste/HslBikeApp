@@ -192,6 +192,50 @@ public class SnapshotServiceTests
         Assert.Equal(AvailabilityTrend.Stable, service.GetTrend("001"));
     }
 
+    [Fact]
+    public void GetTrendSummary_WhenNoData_ReturnsStableWithZeroDeltaAndWindow()
+    {
+        var service = CreateServiceWithFetch(
+            """{"intervalMinutes":15,"timestamps":[],"rows":[]}""");
+
+        Assert.Equal(new TrendSummary(AvailabilityTrend.Stable, 0, 0), service.GetTrendSummary("001"));
+    }
+
+    [Fact]
+    public void GetTrendSummary_UsesLastSixPointsForWindowAndDelta()
+    {
+        var timestamps = Enumerable.Range(0, 8)
+            .Select(i => DateTime.UtcNow.AddMinutes(i).ToString("o"));
+        var timestampsJson = "[" + string.Join(",", timestamps.Select(t => $"\"{t}\"")) + "]";
+        var json = $$"""
+            {
+              "intervalMinutes": 1,
+              "timestamps": {{timestampsJson}},
+              "rows": [["001", 99, 99, 0, 1, 2, 3, 4, 5]]
+            }
+            """;
+        var service = CreateServiceWithFetch(json);
+
+        Assert.Equal(new TrendSummary(AvailabilityTrend.Increasing, 5, 5), service.GetTrendSummary("001"));
+    }
+
+    [Fact]
+    public void GetTrendSummary_WhenWindowIsLessThanOneMinute_ReturnsStableWithZeroWindow()
+    {
+        var now = DateTime.UtcNow;
+        var timestampsJson = $"[\"{now:o}\",\"{now.AddSeconds(30):o}\"]";
+        var json = $$"""
+            {
+              "intervalMinutes": 1,
+              "timestamps": {{timestampsJson}},
+              "rows": [["001", 5, 7]]
+            }
+            """;
+        var service = CreateServiceWithFetch(json);
+
+        Assert.Equal(new TrendSummary(AvailabilityTrend.Stable, 0, 0), service.GetTrendSummary("001"));
+    }
+
     #endregion
 
     #region GetSparkline

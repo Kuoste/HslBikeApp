@@ -64,14 +64,46 @@ public class DisplayHelpersTests
     }
 
     [Theory]
-    [InlineData(AvailabilityTrend.RapidDecrease, "\u00bb\u00bb")]
-    [InlineData(AvailabilityTrend.Decreasing, "\u00bb")]
-    [InlineData(AvailabilityTrend.Increasing, "\u00ab")]
-    [InlineData(AvailabilityTrend.RapidIncrease, "\u00ab\u00ab")]
-    [InlineData(AvailabilityTrend.Stable, "=")]
-    public void GetTrendChevron_ReturnsExpectedSymbol(AvailabilityTrend trend, string expectedChevron)
+    [InlineData(AvailabilityTrend.RapidDecrease, "\u21ca")]
+    [InlineData(AvailabilityTrend.Decreasing, "\u2193")]
+    [InlineData(AvailabilityTrend.Increasing, "\u2191")]
+    [InlineData(AvailabilityTrend.RapidIncrease, "\u21c8")]
+    [InlineData(AvailabilityTrend.Stable, null)]
+    public void GetTrendChevron_ReturnsExpectedSymbol(AvailabilityTrend trend, string? expectedChevron)
     {
         Assert.Equal(expectedChevron, DisplayHelpers.GetTrendChevron(trend));
+    }
+
+    [Fact]
+    public void FormatTrendExplanation_WhenWindowIsLessThanOneMinute_ReturnsNull()
+    {
+        var summary = new TrendSummary(AvailabilityTrend.Increasing, 2, 0);
+
+        Assert.Null(DisplayHelpers.FormatTrendExplanation(summary));
+    }
+
+    [Fact]
+    public void FormatTrendExplanation_WhenStable_ReturnsNoChangeText()
+    {
+        var summary = new TrendSummary(AvailabilityTrend.Stable, 0, 15);
+
+        Assert.Equal("No change in the last 15 min", DisplayHelpers.FormatTrendExplanation(summary));
+    }
+
+    [Fact]
+    public void FormatTrendExplanation_WhenSingleBikeIncrease_UsesSingularWithPlusSign()
+    {
+        var summary = new TrendSummary(AvailabilityTrend.Increasing, 1, 12);
+
+        Assert.Equal("+1 bike in the last 12 min", DisplayHelpers.FormatTrendExplanation(summary));
+    }
+
+    [Fact]
+    public void FormatTrendExplanation_WhenBikesDecrease_UsesNegativeSign()
+    {
+        var summary = new TrendSummary(AvailabilityTrend.Decreasing, -2, 8);
+
+        Assert.Equal("-2 bikes in the last 8 min", DisplayHelpers.FormatTrendExplanation(summary));
     }
 
     [Fact]
