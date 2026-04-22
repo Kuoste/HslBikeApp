@@ -27,10 +27,10 @@ public class AppState : IDisposable
         get
         {
             if (string.IsNullOrEmpty(SearchQuery)) return Stations;
-            var q = SearchQuery.ToLowerInvariant();
-            return Stations.Where(s =>
-                s.Name.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-                s.Address.Contains(q, StringComparison.OrdinalIgnoreCase)
+            var query = SearchQuery.ToLowerInvariant();
+            return Stations.Where(station =>
+                station.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                station.Address.Contains(query, StringComparison.OrdinalIgnoreCase)
             ).ToList();
         }
     }
@@ -87,7 +87,7 @@ public class AppState : IDisposable
 
         try
         {
-            var previous = Stations.ToDictionary(s => s.Id, s => s.BikesAvailable);
+            var previous = Stations.ToDictionary(station => station.Id, station => station.BikesAvailable);
             var latestStations = await _stationService.FetchStationsAsync();
 
             if (!_stationService.LastFetchSucceeded)
@@ -108,20 +108,20 @@ public class AppState : IDisposable
             if (previous.Count > 0)
             {
                 BikeChanges = new Dictionary<string, int>();
-                foreach (var s in Stations)
+                foreach (var station in Stations)
                 {
-                    if (previous.TryGetValue(s.Id, out var prev) && prev != s.BikesAvailable)
-                        BikeChanges[s.Id] = s.BikesAvailable - prev;
+                    if (previous.TryGetValue(station.Id, out var previousCount) && previousCount != station.BikesAvailable)
+                        BikeChanges[station.Id] = station.BikesAvailable - previousCount;
                 }
             }
 
             // Append live snapshot for trend tracking
             _snapshotService.AppendLiveSnapshot(
-                Stations.ToDictionary(s => s.Id, s => s.BikesAvailable));
+                Stations.ToDictionary(station => station.Id, station => station.BikesAvailable));
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            StationError = $"Could not load live bike stations from the aggregator backend. {ex.Message}";
+            StationError = $"Could not load live bike stations from the aggregator backend. {exception.Message}";
         }
         finally
         {
@@ -212,9 +212,9 @@ public class AppState : IDisposable
     public AvailabilityTrend GetTrend(string stationId) =>
         _snapshotService.GetTrend(stationId);
 
-    /// <summary>Returns sparkline data from the snapshot service for a given station.</summary>
-    public List<int> GetSparkline(string stationId, int count = 12) =>
-        _snapshotService.GetSparkline(stationId, count);
+    /// <summary>Returns a trend summary from the snapshot service for a given station.</summary>
+    public TrendSummary GetTrendSummary(string stationId) =>
+        _snapshotService.GetTrendSummary(stationId);
 
     /// <summary>Returns the snapshot timestamps.</summary>
     public IReadOnlyList<DateTime> SnapshotTimestamps => _snapshotService.Timestamps;

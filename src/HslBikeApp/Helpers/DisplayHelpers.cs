@@ -3,8 +3,8 @@ using HslBikeApp.Models;
 namespace HslBikeApp.Helpers;
 
 /// <summary>
-/// Pure helper methods for station marker colours, trend chevrons and CSS classes.
-/// Shared across MapView, StationInfoPanel and StationDetailPanel.
+/// Pure helper methods for station marker colours, trend arrows and CSS classes.
+/// Shared across MapView and station panels.
 /// </summary>
 public static class DisplayHelpers
 {
@@ -17,13 +17,13 @@ public static class DisplayHelpers
         return "#388e3c";                                   // green
     }
 
-    /// <summary>Returns a chevron badge string and its colour for map marker badges.</summary>
+    /// <summary>Returns an arrow badge string and its colour for map marker badges.</summary>
     public static (string Badge, string Colour) GetBadge(AvailabilityTrend trend) => trend switch
     {
-        AvailabilityTrend.RapidDecrease => ("\u00bb\u00bb", "#d32f2f"),
-        AvailabilityTrend.Decreasing => ("\u00bb", "#f57c00"),
-        AvailabilityTrend.Increasing => ("\u00ab", "#388e3c"),
-        AvailabilityTrend.RapidIncrease => ("\u00ab\u00ab", "#009688"),
+        AvailabilityTrend.RapidDecrease => ("\u21ca", "#d32f2f"),
+        AvailabilityTrend.Decreasing => ("\u2193", "#f57c00"),
+        AvailabilityTrend.Increasing => ("\u2191", "#388e3c"),
+        AvailabilityTrend.RapidIncrease => ("\u21c8", "#009688"),
         _ => ("", "")
     };
 
@@ -37,23 +37,38 @@ public static class DisplayHelpers
         _ => "stable"
     };
 
-    /// <summary>Returns a short chevron symbol for the trend (info panel chip).</summary>
-    public static string GetTrendChevron(AvailabilityTrend trend) => trend switch
+    /// <summary>Returns a short arrow symbol for the trend chip, or <c>null</c> for stable.</summary>
+    public static string? GetTrendChevron(AvailabilityTrend trend) => trend switch
     {
-        AvailabilityTrend.RapidDecrease => "\u00bb\u00bb",
-        AvailabilityTrend.Decreasing => "\u00bb",
-        AvailabilityTrend.Increasing => "\u00ab",
-        AvailabilityTrend.RapidIncrease => "\u00ab\u00ab",
-        _ => "="
+        AvailabilityTrend.RapidDecrease => "\u21ca",
+        AvailabilityTrend.Decreasing => "\u2193",
+        AvailabilityTrend.Increasing => "\u2191",
+        AvailabilityTrend.RapidIncrease => "\u21c8",
+        _ => null
     };
 
-    /// <summary>Returns descriptive trend text with chevron prefix (detail panel).</summary>
+    /// <summary>Returns a human-readable explanation for the recent trend window.</summary>
+    public static string? FormatTrendExplanation(TrendSummary summary)
+    {
+        if (summary.WindowMinutes < 1)
+            return null;
+
+        if (summary.Trend == AvailabilityTrend.Stable || summary.DeltaBikes == 0)
+            return $"No change in the last {summary.WindowMinutes} min";
+
+        var magnitude = Math.Abs(summary.DeltaBikes);
+        var noun = magnitude == 1 ? "bike" : "bikes";
+        var sign = summary.DeltaBikes > 0 ? "+" : string.Empty;
+        return $"{sign}{summary.DeltaBikes} {noun} in the last {summary.WindowMinutes} min";
+    }
+
+    /// <summary>Returns descriptive trend text with arrow prefix.</summary>
     public static string GetTrendText(AvailabilityTrend trend) => trend switch
     {
-        AvailabilityTrend.RapidDecrease => "\u00bb\u00bb Bikes leaving rapidly",
-        AvailabilityTrend.Decreasing => "\u00bb Bikes leaving",
-        AvailabilityTrend.Increasing => "\u00ab Bikes arriving",
-        AvailabilityTrend.RapidIncrease => "\u00ab\u00ab Bikes arriving rapidly",
+        AvailabilityTrend.RapidDecrease => "\u21ca Bikes leaving rapidly",
+        AvailabilityTrend.Decreasing => "\u2193 Bikes leaving",
+        AvailabilityTrend.Increasing => "\u2191 Bikes arriving",
+        AvailabilityTrend.RapidIncrease => "\u21c8 Bikes arriving rapidly",
         _ => "Stable"
     };
 

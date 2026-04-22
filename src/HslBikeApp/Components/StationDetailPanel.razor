@@ -1,13 +1,22 @@
 @using System.Globalization
 @using HslBikeApp.Helpers
 
+@{
+    var trendChevron = DisplayHelpers.GetTrendChevron(Trend);
+    var trendExplanation = DisplayHelpers.FormatTrendExplanation(TrendSummary);
+}
+
 <div class="detail-panel">
-    <button class="back-btn" @onclick="OnBack">&#8592; Back to map</button>
+    <div class="drag-handle" aria-hidden="true"></div>
 
-    <h2>@Station.Name</h2>
-    <div class="meta">@Station.Address</div>
+    <div class="detail-panel-header">
+        <div class="detail-panel-heading">
+            <h2>@Station.Name</h2>
+            <div class="meta">@Station.Address</div>
+        </div>
+        <button class="close-btn" @onclick="OnClose" aria-label="Close station details">&#10005;</button>
+    </div>
 
-    <!-- Availability card -->
     <div class="detail-card">
         <h4>Availability</h4>
         <div class="chips">
@@ -20,55 +29,56 @@
                 <span class="chip @DisplayHelpers.GetBikeChipClass(Station.BikesAvailable)">
                     &#128690; @Station.BikesAvailable / @Station.Capacity bikes
                 </span>
+                @if (trendChevron is not null)
+                {
+                    <span class="chip trend-chip @DisplayHelpers.GetTrendClass(Trend)" title="@trendExplanation">@trendChevron</span>
+                }
             }
         </div>
 
-        <div class="trend @DisplayHelpers.GetTrendClass(Trend)">@DisplayHelpers.GetTrendText(Trend)</div>
-
-        @if (Sparkline.Count > 1)
+        @if (Station.IsActive && trendExplanation is not null)
         {
-            <svg class="sparkline" width="200" height="40" viewBox="0 0 200 40" aria-label="Bike availability trend">
-                <polyline points="@GetSparklinePoints()" />
-            </svg>
+            <div class="trend-explanation">@trendExplanation</div>
         }
     </div>
 
-    <!-- Real-time availability history graph -->
     <div class="detail-card">
         <h4>Availability History</h4>
 
         @if (SnapshotCounts.Length > 1 && Timestamps.Count > 1)
         {
-            <div class="availability-legend">
-                @Timestamps[0].ToLocalTime().ToString("HH:mm", InvariantCulture) &ndash;
-                @Timestamps[^1].ToLocalTime().ToString("HH:mm", InvariantCulture)
-                &middot; @Timestamps.Count points
-            </div>
-            <div class="snapshot-chart-wrapper">
-                <svg class="snapshot-chart" viewBox="0 0 400 160" preserveAspectRatio="none"
-                     aria-label="Bike availability over time">
-                    <!-- Capacity reference line -->
-                    <line class="capacity-line"
-                          x1="0" y1="@GetChartY(Station.Capacity)"
-                          x2="400" y2="@GetChartY(Station.Capacity)" />
+            <div class="availability-legend">Last @FormatDuration(Timestamps[^1] - Timestamps[0])</div>
 
-                    @{
-                        var segments = GetAreaSegments();
-                    }
-                    @foreach (var seg in segments)
-                    {
-                        <path class="@seg.CssClass" d="@seg.Path" />
-                        <polyline class="snapshot-line @seg.CssClass" points="@seg.LinePoints" />
-                    }
+            <div class="snapshot-chart-layout">
+                <div class="snapshot-y-axis">
+                    <span>@((int)Math.Ceiling(ChartMaxY))</span>
+                    <span>@((int)Math.Ceiling(ChartMaxY) / 2)</span>
+                    <span>0</span>
+                </div>
+                <div class="snapshot-chart-wrapper">
+                    <svg class="snapshot-chart" viewBox="0 0 400 160" preserveAspectRatio="none"
+                         aria-label="Bike availability over time">
+                        <line class="capacity-line"
+                              x1="0" y1="@GetChartY(Station.Capacity)"
+                              x2="400" y2="@GetChartY(Station.Capacity)" />
 
-                    <!-- Latest value dot -->
-                    @{
-                        var lastX = GetChartX(SnapshotCounts.Length - 1);
-                        var lastY = GetChartY(SnapshotCounts[^1]);
-                    }
-                    <circle class="latest-dot" cx="@F(lastX)" cy="@F(lastY)" r="4" />
-                    <text class="latest-label" x="@F(lastX)" y="@F(lastY - 10)">@SnapshotCounts[^1]</text>
-                </svg>
+                        @foreach (var segment in GetAreaSegments())
+                        {
+                            <path class="@segment.CssClass" d="@segment.Path" />
+                            <polyline class="snapshot-line @segment.CssClass" points="@segment.LinePoints" />
+                        }
+
+                        <circle class="latest-dot"
+                                cx="@F(GetChartX(SnapshotCounts.Length - 1))"
+                                cy="@F(GetChartY(SnapshotCounts[^1]))" r="4" />
+                    </svg>
+                    <div class="snapshot-x-axis">
+                        @foreach (var tick in BuildXAxisTicks())
+                        {
+                            <span style="left:@F(tick.Percent)%;">@tick.Label</span>
+                        }
+                    </div>
+                </div>
             </div>
         }
         else
@@ -77,7 +87,6 @@
         }
     </div>
 
-    <!-- Metadata card -->
     <div class="detail-card">
         <h4>Station Info</h4>
         <div><strong>Station ID:</strong> @Station.Id</div>
@@ -88,7 +97,6 @@
         }
     </div>
 
-    <!-- Monthly stats section (lazy-loaded) -->
     <div class="detail-card">
         <h4>
             <button class="stats-toggle" @onclick="ToggleMonthlyStats">
@@ -106,14 +114,12 @@
             {
                 <div class="stats-month">@FormatMonth(Statistics.Month)</div>
 
-                <!-- Day type toggle -->
                 <div class="day-type-toggle" role="group" aria-label="Day type filter">
                     <button class="@GetDayTypeClass(DayType.All)" @onclick="() => SetDayType(DayType.All)">All days</button>
                     <button class="@GetDayTypeClass(DayType.Weekday)" @onclick="() => SetDayType(DayType.Weekday)">Weekdays</button>
                     <button class="@GetDayTypeClass(DayType.Weekend)" @onclick="() => SetDayType(DayType.Weekend)">Weekends</button>
                 </div>
 
-                <!-- Demand chart -->
                 <div class="demand-chart-wrapper">
                     <div class="demand-chart" role="img" aria-label="Departures and arrivals by hour">
                         @{
@@ -123,12 +129,12 @@
                         }
                         @for (var hour = 0; hour < 24; hour++)
                         {
-                            var depHeight = Math.Max(4.0, (double)departures[hour] / maxDemand * 100.0);
-                            var arrHeight = Math.Max(4.0, (double)arrivals[hour] / maxDemand * 100.0);
+                            var departureHeight = Math.Max(4.0, (double)departures[hour] / maxDemand * 100.0);
+                            var arrivalHeight = Math.Max(4.0, (double)arrivals[hour] / maxDemand * 100.0);
                             <div class="demand-column" title="@hour:00 — @departures[hour] dep, @arrivals[hour] arr">
                                 <div class="demand-bars">
-                                    <div class="demand-bar departure" style="height:@F(depHeight)%;"></div>
-                                    <div class="demand-bar arrival" style="height:@F(arrHeight)%;"></div>
+                                    <div class="demand-bar departure" style="height:@F(departureHeight)%;"></div>
+                                    <div class="demand-bar arrival" style="height:@F(arrivalHeight)%;"></div>
                                 </div>
                                 <div class="demand-hour">@hour.ToString("00", InvariantCulture)</div>
                             </div>
@@ -140,22 +146,21 @@
                     <span class="legend-dot arrival"></span> Arrivals
                 </div>
 
-                <!-- Destinations list -->
                 @if (Destinations.Count > 0)
                 {
                     <h4 style="margin-top:16px;">Popular Destinations</h4>
                     <ul class="destination-list">
-                        @foreach (var d in Destinations.Take(15))
+                        @foreach (var destination in Destinations.Take(15))
                         {
                             <li class="destination-item">
                                 <div class="destination-icon">&#128205;</div>
                                 <div class="destination-info">
-                                    <div class="destination-name">@ResolveStationName(d.ArrivalStationId)</div>
+                                    <div class="destination-name">@ResolveStationName(destination.ArrivalStationId)</div>
                                     <div class="destination-meta">
-                                        @d.TripCount trips &middot; avg @d.AverageDurationFormatted
-                                        @if (d.AverageDistanceMetres > 0)
+                                        @destination.TripCount trips &middot; avg @destination.AverageDurationFormatted
+                                        @if (destination.AverageDistanceMetres > 0)
                                         {
-                                            <text> &middot; @((d.AverageDistanceMetres / 1000.0).ToString("0.1")) km</text>
+                                            <text> &middot; @((destination.AverageDistanceMetres / 1000.0).ToString("0.0", InvariantCulture)) km</text>
                                         }
                                     </div>
                                 </div>
@@ -178,12 +183,12 @@
     [Parameter] public bool IsLoadingStatistics { get; set; }
     [Parameter] public MonthlyStationStatistics? Statistics { get; set; }
     [Parameter] public AvailabilityTrend Trend { get; set; }
-    [Parameter] public List<int> Sparkline { get; set; } = [];
+    [Parameter] public required TrendSummary TrendSummary { get; set; }
     [Parameter] public int[] SnapshotCounts { get; set; } = [];
     [Parameter] public IReadOnlyList<DateTime> Timestamps { get; set; } = [];
     [Parameter] public Func<int, bool>? IsGap { get; set; }
     [Parameter] public List<BikeStation> AllStations { get; set; } = [];
-    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback OnToggleMonthlyStats { get; set; }
 
     private static readonly CultureInfo InvariantCulture = CultureInfo.InvariantCulture;
@@ -220,31 +225,9 @@
     private string GetDayTypeClass(DayType dayType) =>
         _selectedDayType == dayType ? "day-type-btn active" : "day-type-btn";
 
-    private string GetSparklinePoints()
-    {
-        if (Sparkline.Count < 2) return "";
-        var max = Sparkline.Max();
-        if (max == 0) max = 1;
-        var width = 200.0;
-        var height = 36.0;
-        var step = width / (Sparkline.Count - 1);
-
-        return string.Join(" ", Sparkline.Select((v, i) =>
-            $"{F(i * step)},{F(height - (double)v / max * height)}"
-        ));
-    }
-
-    // --- Snapshot chart helpers ---
-    private double _chartMaxY = 0;
-    private double ChartMaxY
-    {
-        get
-        {
-            if (_chartMaxY == 0 && SnapshotCounts.Length > 0)
-                _chartMaxY = Math.Max(Station.Capacity, SnapshotCounts.Max());
-            return _chartMaxY > 0 ? _chartMaxY : 1;
-        }
-    }
+    private double ChartMaxY => SnapshotCounts.Length > 0
+        ? Math.Max(Station.Capacity > 0 ? Station.Capacity : 1, SnapshotCounts.Max())
+        : 1;
 
     private double GetChartX(int index)
     {
@@ -260,18 +243,18 @@
     private List<AreaSegment> GetAreaSegments()
     {
         var segments = new List<AreaSegment>();
-        var startIdx = 0;
+        var startIndex = 0;
 
-        for (var i = 0; i <= SnapshotCounts.Length; i++)
+        for (var index = 0; index <= SnapshotCounts.Length; index++)
         {
-            var isEnd = i == SnapshotCounts.Length;
-            var isGapHere = !isEnd && i > 0 && (IsGap?.Invoke(i) ?? false);
+            var isEnd = index == SnapshotCounts.Length;
+            var isGapHere = !isEnd && index > 0 && (IsGap?.Invoke(index) ?? false);
 
             if (isEnd || isGapHere)
             {
-                if (i > startIdx)
-                    segments.Add(BuildSegment(startIdx, isGapHere ? i - 1 : i - 1));
-                startIdx = i;
+                if (index > startIndex)
+                    segments.Add(BuildSegment(startIndex, index - 1));
+                startIndex = index;
             }
         }
 
@@ -283,40 +266,38 @@
         var points = new List<string>();
         var linePoints = new List<string>();
 
-        for (var i = from; i <= to; i++)
+        for (var index = from; index <= to; index++)
         {
-            var x = GetChartX(i);
-            var y = GetChartY(SnapshotCounts[i]);
+            var x = GetChartX(index);
+            var y = GetChartY(SnapshotCounts[index]);
             points.Add($"{F(x)},{F(y)}");
             linePoints.Add($"{F(x)},{F(y)}");
         }
 
-        // Determine colour class based on average ratio
-        var avgRatio = to >= from
+        var averageRatio = to >= from
             ? Enumerable.Range(from, to - from + 1)
-                .Average(i => Station.Capacity > 0 ? (double)SnapshotCounts[i] / Station.Capacity : 0)
+                .Average(index => Station.Capacity > 0 ? (double)SnapshotCounts[index] / Station.Capacity : 0)
             : 0;
 
-        var cssClass = avgRatio switch
+        var cssClass = averageRatio switch
         {
             < 0.1 => "zone-red",
             < 0.3 => "zone-amber",
             _ => "zone-green"
         };
 
-        // Build closed area path
         var firstX = F(GetChartX(from));
         var lastX = F(GetChartX(to));
-        var baseline = F(140.0 + 5);
-        var pathD = $"M {firstX},{baseline} L {string.Join(" L ", points)} L {lastX},{baseline} Z";
+        var baseline = F(145.0);
+        var path = $"M {firstX},{baseline} L {string.Join(" L ", points)} L {lastX},{baseline} Z";
 
-        return new AreaSegment(pathD, string.Join(" ", linePoints), cssClass);
+        return new AreaSegment(path, string.Join(" ", linePoints), cssClass);
     }
 
     private string ResolveStationName(string stationId)
     {
-        var station = AllStations.FirstOrDefault(s =>
-            s.Id.Equals(stationId, StringComparison.OrdinalIgnoreCase));
+        var station = AllStations.FirstOrDefault(candidate =>
+            candidate.Id.Equals(stationId, StringComparison.OrdinalIgnoreCase));
         return station?.Name ?? stationId;
     }
 
@@ -327,5 +308,56 @@
         return month;
     }
 
-    private static string F(double value) => value.ToString("0.1", InvariantCulture);
+    private static string FormatDuration(TimeSpan span)
+    {
+        var totalMinutes = Math.Max(0, (int)Math.Round(span.TotalMinutes));
+        if (totalMinutes < 60) return $"{totalMinutes} min";
+
+        var hours = totalMinutes / 60;
+        var minutes = totalMinutes % 60;
+        return minutes == 0 ? $"{hours} h" : $"{hours} h {minutes} min";
+    }
+
+    private record XAxisTick(double Percent, string Label);
+
+    private List<XAxisTick> BuildXAxisTicks()
+    {
+        var ticks = new List<XAxisTick>();
+        if (Timestamps.Count < 2) return ticks;
+
+        var latest = Timestamps[^1];
+        var earliest = Timestamps[0];
+        var totalMinutes = (latest - earliest).TotalMinutes;
+        if (totalMinutes <= 0) return ticks;
+
+        // Always anchor the right edge at "now".
+        ticks.Add(new XAxisTick(100, "now"));
+
+        // Pick a step so we get roughly 3-5 ticks across the chart.
+        var totalHours = totalMinutes / 60.0;
+        var stepHours = totalHours switch
+        {
+            <= 2 => 0.5,
+            <= 6 => 1,
+            <= 12 => 2,
+            <= 24 => 4,
+            _ => 6
+        };
+
+        for (var hoursAgo = stepHours; hoursAgo <= totalHours + 0.01; hoursAgo += stepHours)
+        {
+            var minutesAgo = hoursAgo * 60;
+            var percent = 100.0 - (minutesAgo / totalMinutes * 100.0);
+            if (percent < 2) break;
+
+            var label = stepHours < 1
+                ? $"{(int)Math.Round(minutesAgo)} min ago"
+                : $"{hoursAgo:0.#} h ago";
+            ticks.Add(new XAxisTick(percent, label));
+        }
+
+        return ticks;
+    }
+
+    private static string F(double value) => value.ToString("0.##", InvariantCulture);
 }

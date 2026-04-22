@@ -87,3 +87,7 @@ The backlog is organised into phases. Respect dependencies when picking up work:
 3. **Phase 3 — Feature** (#4): hourly availability graph. Depends on aggregator URL being configured.
 4. **Phase 4 — Independent** (#5, #6): geolocation and cycle lanes. No backend dependency.
 5. **Phase 5 — Housekeeping** (#8): British English normalisation. Do after phase 2 to avoid conflicts.
+
+## Trend Calculation Guidelines
+
+- When calculating trends, do not rely solely on the few minutes since the latest live refresh when the snapshot interval is 15 minutes; instead, compare against the full relevant interval (e.g., about 18 minutes in this case).

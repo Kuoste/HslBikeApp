@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @inject AppState State
 @implements IDisposable
 @using System.Globalization
@@ -18,7 +18,7 @@
         <button class="top-action-btn @GetInfoButtonClass()"
                 @onclick="ToggleInfo"
                 aria-expanded="@_showInfo"
-                aria-label="Toggle sources and license information">
+                aria-label="Toggle sources and licence information">
             <span class="top-action-icon" aria-hidden="true">&#9432;</span>
         </button>
     </div>
@@ -36,10 +36,10 @@
 
     @if (_showInfo)
     {
-        <section class="floating-panel info-popover" aria-label="Sources and license information">
+        <section class="floating-panel info-popover" aria-label="Sources and licence information">
             <div class="floating-panel-header">
-                <h2>Sources and license</h2>
-                <button class="panel-close-btn" @onclick="CloseInfo" aria-label="Close sources and license">&#10005;</button>
+                <h2>Sources and licence</h2>
+                <button class="panel-close-btn" @onclick="CloseInfo" aria-label="Close sources and licence">&#10005;</button>
             </div>
             <div class="attribution-body">
                 <p>
@@ -78,27 +78,19 @@
     </button>
 </div>
 
-@if (State.SelectedStation is not null && !_showDetail)
-{
-    <StationInfoPanel Station="State.SelectedStation"
-                      Trend="@State.GetTrend(State.SelectedStation.Id)"
-                      OnClose="OnClosePanel"
-                      OnViewDetail="OnViewDetail" />
-}
-
-@if (_showDetail && State.SelectedStation is not null)
+@if (State.SelectedStation is not null)
 {
     <StationDetailPanel Station="State.SelectedStation"
                         Destinations="State.Destinations"
                         IsLoadingStatistics="State.IsLoadingStatistics"
                         Statistics="State.Statistics"
                         Trend="@State.GetTrend(State.SelectedStation.Id)"
-                        Sparkline="@State.GetSparkline(State.SelectedStation.Id)"
+                        TrendSummary="@State.GetTrendSummary(State.SelectedStation.Id)"
                         SnapshotCounts="@State.GetStationSnapshotCounts(State.SelectedStation.Id)"
                         Timestamps="@State.SnapshotTimestamps"
                         IsGap="@State.IsSnapshotGap"
                         AllStations="@State.Stations"
-                        OnBack="OnBackFromDetail"
+                        OnClose="OnClosePanel"
                         OnToggleMonthlyStats="OnToggleMonthlyStats" />
 }
 
@@ -113,7 +105,6 @@
 }
 
 @code {
-    private bool _showDetail;
     private bool _showSearch;
     private bool _showInfo;
     private Action? _stateChangedHandler;
@@ -129,11 +120,7 @@
 
     private async Task RefreshAsync() => await State.RefreshNowAsync();
 
-    private void OnClosePanel()
-    {
-        State.ClearSelection();
-        _showDetail = false;
-    }
+    private void OnClosePanel() => State.ClearSelection();
 
     private void ToggleSearch()
     {
@@ -158,8 +145,6 @@
     private string GetInfoButtonClass() =>
         _showInfo ? "active" : string.Empty;
 
-    private void OnViewDetail() => _showDetail = true;
-    private void OnBackFromDetail() => _showDetail = false;
     private async Task OnToggleMonthlyStats() => await State.LoadStatisticsAsync();
 
     private static string FormatUtc(DateTime value) =>
