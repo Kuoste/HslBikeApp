@@ -127,3 +127,21 @@ window.MapInterop = {
         if (this._map) this._map.invalidateSize();
     }
 };
+
+// Visibility interop — notifies Blazor when the tab becomes visible or hidden.
+window.VisibilityInterop = {
+    _dotNetRef: null,
+
+    register: function (dotNetRef) {
+        this._dotNetRef = dotNetRef;
+        document.addEventListener('visibilitychange', () => {
+            if (this._dotNetRef) {
+                this._dotNetRef.invokeMethodAsync('OnVisibilityChanged', !document.hidden);
+            }
+        });
+    },
+
+    dispose: function () {
+        this._dotNetRef = null;
+    }
+};

@@ -71,6 +71,18 @@
                         <circle class="latest-dot"
                                 cx="@F(GetChartX(SnapshotCounts.Length - 1))"
                                 cy="@F(GetChartY(SnapshotCounts[^1]))" r="4" />
+
+                        @if (LiveCount.HasValue && LiveTimestamp.HasValue && Timestamps.Count >= 1)
+                        {
+                            var liveX = GetLiveChartX();
+                            if (liveX.HasValue)
+                            {
+                                <circle class="live-dot"
+                                        cx="@F(liveX.Value)"
+                                        cy="@F(GetChartY(LiveCount.Value))" r="5"
+                                        aria-label="Live: @LiveCount bikes" />
+                            }
+                        }
                     </svg>
                     <div class="snapshot-x-axis">
                         @foreach (var tick in BuildXAxisTicks())
@@ -187,6 +199,8 @@
     [Parameter] public int[] SnapshotCounts { get; set; } = [];
     [Parameter] public IReadOnlyList<DateTime> Timestamps { get; set; } = [];
     [Parameter] public Func<int, bool>? IsGap { get; set; }
+    [Parameter] public int? LiveCount { get; set; }
+    [Parameter] public DateTime? LiveTimestamp { get; set; }
     [Parameter] public List<BikeStation> AllStations { get; set; } = [];
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback OnToggleMonthlyStats { get; set; }
@@ -237,6 +251,28 @@
 
     private double GetChartY(int count) =>
         140.0 - (count / ChartMaxY * 130.0) + 5;
+
+    /// <summary>
+    /// Maps <see cref="LiveTimestamp"/> to an SVG x coordinate relative to the snapshot time axis.
+    /// Returns <c>null</c> when no timestamps are available or live is before the series.
+    /// </summary>
+    private double? GetLiveChartX()
+    {
+        if (!LiveTimestamp.HasValue || Timestamps.Count < 1) return null;
+
+        var earliest = Timestamps[0];
+        var latest = Timestamps[^1];
+        var totalSpan = (latest - earliest).TotalMinutes;
+
+        // Extend the axis to include the live point beyond the last snapshot
+        var liveSpan = (LiveTimestamp.Value - earliest).TotalMinutes;
+        if (liveSpan <= 0) return null;
+
+        var fullSpan = Math.Max(totalSpan, liveSpan);
+        if (fullSpan <= 0) return null;
+
+        return 400.0 * liveSpan / fullSpan;
+    }
 
     private record AreaSegment(string Path, string LinePoints, string CssClass);
 

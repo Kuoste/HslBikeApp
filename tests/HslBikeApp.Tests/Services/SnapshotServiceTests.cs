@@ -86,6 +86,31 @@ public class SnapshotServiceTests
         Assert.Null(result);
     }
 
+    [Fact]
+    public void LatestSnapshotTimestamp_WhenFetched_ReturnsLastTimestamp()
+    {
+        var service = CreateServiceWithFetch(
+            """
+            {
+              "intervalMinutes": 15,
+              "timestamps": ["2026-06-01T10:00:00Z", "2026-06-01T10:15:00Z"],
+              "rows": [["001", 5, 8]]
+            }
+            """);
+
+        Assert.Equal(DateTime.Parse("2026-06-01T10:15:00Z").ToUniversalTime(), service.LatestSnapshotTimestamp);
+    }
+
+    [Fact]
+    public void LatestSnapshotTimestamp_WhenNoDataFetched_ReturnsNull()
+    {
+        var httpClient = new HttpClient(new StubHttpMessageHandler((_, _) =>
+            throw new HttpRequestException("no data")));
+        var service = new SnapshotService(httpClient, "https://aggregator.example");
+
+        Assert.Null(service.LatestSnapshotTimestamp);
+    }
+
     #endregion
 
     #region GetStationCounts
@@ -143,49 +168,13 @@ public class SnapshotServiceTests
 
     #endregion
 
-    #region GetTrend
+    #region GetTrend / GetTrendSummary — no live data
 
     [Fact]
     public void GetTrend_WhenNoData_ReturnsStable()
     {
         var service = CreateServiceWithFetch(
             """{"intervalMinutes":15,"timestamps":[],"rows":[]}""");
-
-        Assert.Equal(AvailabilityTrend.Stable, service.GetTrend("001"));
-    }
-
-    [Fact]
-    public void GetTrend_WhenBikesDecreasingRapidly_ReturnsRapidDecrease()
-    {
-        var timestamps = Enumerable.Range(0, 6)
-            .Select(index => DateTime.UtcNow.AddMinutes(index).ToString("o"));
-        var timestampsJson = "[" + string.Join(",", timestamps.Select(timestamp => $"\"{timestamp}\"")) + "]";
-        var json = $$"""
-            {
-              "intervalMinutes": 1,
-              "timestamps": {{timestampsJson}},
-              "rows": [["001", 20, 16, 12, 8, 4, 0]]
-            }
-            """;
-        var service = CreateServiceWithFetch(json);
-
-        Assert.Equal(AvailabilityTrend.RapidDecrease, service.GetTrend("001"));
-    }
-
-    [Fact]
-    public void GetTrend_WhenBikesStable_ReturnsStable()
-    {
-        var timestamps = Enumerable.Range(0, 6)
-            .Select(index => DateTime.UtcNow.AddMinutes(index * 5).ToString("o"));
-        var timestampsJson = "[" + string.Join(",", timestamps.Select(timestamp => $"\"{timestamp}\"")) + "]";
-        var json = $$"""
-            {
-              "intervalMinutes": 5,
-              "timestamps": {{timestampsJson}},
-              "rows": [["001", 10, 10, 10, 10, 10, 10]]
-            }
-            """;
-        var service = CreateServiceWithFetch(json);
 
         Assert.Equal(AvailabilityTrend.Stable, service.GetTrend("001"));
     }
@@ -200,63 +189,46 @@ public class SnapshotServiceTests
     }
 
     [Fact]
-    public void GetTrendSummary_UsesTimeBasedWindowOfIntervalTimes1Point2ForWindowAndDelta()
+    public void GetTrend_WhenNoLiveData_AndBikesDecreasingRapidly_ReturnsRapidDecrease()
     {
-        // intervalMinutes=1 → targetWindow = 1.2 min.
-        // Walk back from index 7: index 6 is only 1 min away (< 1.2); index 5 is 2 min away (>= 1.2).
-        // So start = index 5, window = 2 min, delta = counts[7] - counts[5] = 5 - 3 = 2.
-        var timestamps = Enumerable.Range(0, 8)
-            .Select(index => DateTime.UtcNow.AddMinutes(index).ToString("o"));
-        var timestampsJson = "[" + string.Join(",", timestamps.Select(timestamp => $"\"{timestamp}\"")) + "]";
+        // Two snapshots 1 min apart, −4 bikes → rate −4/min ≤ −2 → RapidDecrease
+        var now = DateTime.UtcNow;
         var json = $$"""
             {
               "intervalMinutes": 1,
-              "timestamps": {{timestampsJson}},
-              "rows": [["001", 99, 99, 0, 1, 2, 3, 4, 5]]
+              "timestamps": ["{{now.AddMinutes(-1):o}}", "{{now:o}}"],
+              "rows": [["001", 10, 6]]
             }
             """;
         var service = CreateServiceWithFetch(json);
 
-        Assert.Equal(new TrendSummary(AvailabilityTrend.Increasing, 2, 2), service.GetTrendSummary("001"));
+        Assert.Equal(AvailabilityTrend.RapidDecrease, service.GetTrend("001"));
     }
 
     [Fact]
-    public void GetTrendSummary_WhenLivePointAppended_UsesFullIntervalWindowFromOldestRelevantSnapshot()
+    public void GetTrend_WhenNoLiveData_AndBikesStable_ReturnsStable()
     {
-        // intervalMinutes=15 → targetWindow = 18 min.
-        // Points: -18 min (count=0), -3 min (count=5), live now (count=7).
-        // Walk back from live point: -3 min is only ~3 min away (< 18); -18 min is ~18 min away (>= 18).
-        // Start = oldest point, window ≈ 18 min, delta = 7 - 0 = 7.
         var now = DateTime.UtcNow;
-        var timestampsJson = $"[\"{now.AddMinutes(-18):o}\",\"{now.AddMinutes(-3):o}\"]";
         var json = $$"""
             {
               "intervalMinutes": 15,
-              "timestamps": {{timestampsJson}},
-              "rows": [["001", 0, 5]]
+              "timestamps": ["{{now.AddMinutes(-15):o}}", "{{now:o}}"],
+              "rows": [["001", 10, 10]]
             }
             """;
         var service = CreateServiceWithFetch(json);
 
-        service.AppendLiveSnapshot(new Dictionary<string, int> { ["001"] = 7 });
-
-        // rate = 7 bikes / 18 min ≈ 0.39/min → below 0.5 threshold → Stable,
-        // but the window and delta must span the full ~18-min interval.
-        var summary = service.GetTrendSummary("001");
-        Assert.Equal(AvailabilityTrend.Stable, summary.Trend);
-        Assert.Equal(7, summary.DeltaBikes);
-        Assert.InRange(summary.WindowMinutes, 17, 19);
+        Assert.Equal(AvailabilityTrend.Stable, service.GetTrend("001"));
     }
 
     [Fact]
     public void GetTrendSummary_WhenWindowIsLessThanOneMinute_ReturnsStableWithZeroWindow()
     {
         var now = DateTime.UtcNow;
-        var timestampsJson = $"[\"{now:o}\",\"{now.AddSeconds(30):o}\"]";
         var json = $$"""
             {
               "intervalMinutes": 1,
-              "timestamps": {{timestampsJson}},
+              "timestamps": ["{{now:o}}", "{{now.AddSeconds(30):o}}"],
               "rows": [["001", 5, 7]]
             }
             """;
@@ -267,58 +239,112 @@ public class SnapshotServiceTests
 
     #endregion
 
-    #region AppendLiveSnapshot
+    #region GetTrendSummary — with live data
 
     [Fact]
-    public void AppendLiveSnapshot_WhenNoExistingData_CreatesMinimalSeries()
+    public void GetTrendSummary_WithLive_WhenLiveIsWithin10MinOfLastSnapshot_UsesPrevSnapshotVsLive()
     {
-        var httpClient = new HttpClient(new StubHttpMessageHandler((_, _) =>
-            throw new HttpRequestException("no data")));
-        var service = new SnapshotService(httpClient, "https://aggregator.example");
+        // Last snapshot T-2min, prev snapshot T-17min.
+        // Live is 2 min after last snapshot → within 10 min → use prev (T-17) vs live.
+        // Prev count = 4, live count = 10 → delta = +6 over ~19 min → rate ~0.32/min → Stable.
+        var now = DateTime.UtcNow;
+        var tPrev = now.AddMinutes(-17);
+        var tLast = now.AddMinutes(-2);
+        var tLive = now;
+        var json = $$"""
+            {
+              "intervalMinutes": 15,
+              "timestamps": ["{{tPrev:o}}", "{{tLast:o}}"],
+              "rows": [["001", 4, 8]]
+            }
+            """;
+        var service = CreateServiceWithFetch(json);
 
-        service.AppendLiveSnapshot(new Dictionary<string, int> { ["001"] = 7 });
+        var summary = service.GetTrendSummary("001", liveCount: 10, liveTimestamp: tLive);
 
-        var counts = service.GetStationCounts("001");
-        Assert.Single(counts);
-        Assert.Equal(7, counts[0]);
+        // baseline is prev snapshot (count=4, T-17min); live count=10
+        Assert.Equal(6, summary.DeltaBikes);
+        Assert.InRange(summary.WindowMinutes, 16, 18);
     }
 
     [Fact]
-    public void AppendLiveSnapshot_AppendsToExistingSeries()
+    public void GetTrendSummary_WithLive_WhenLiveIsMoreThan10MinAfterLastSnapshot_UsesLastSnapshotVsLive()
     {
-        var service = CreateServiceWithFetch(
-            """
+        // Last snapshot T-12min. Live is 12 min after → ≥ 10 min → use last vs live.
+        // Last count = 5, live count = 15 → delta = +10 over 12 min → rate ~0.83/min → Increasing.
+        var now = DateTime.UtcNow;
+        var tPrev = now.AddMinutes(-27);
+        var tLast = now.AddMinutes(-12);
+        var tLive = now;
+        var json = $$"""
             {
               "intervalMinutes": 15,
-              "timestamps": ["2026-06-01T10:00:00Z"],
-              "rows": [["001", 5]]
+              "timestamps": ["{{tPrev:o}}", "{{tLast:o}}"],
+              "rows": [["001", 3, 5]]
             }
-            """);
+            """;
+        var service = CreateServiceWithFetch(json);
 
-        service.AppendLiveSnapshot(new Dictionary<string, int> { ["001"] = 8 });
+        var summary = service.GetTrendSummary("001", liveCount: 15, liveTimestamp: tLive);
 
-        var counts = service.GetStationCounts("001");
-        Assert.Equal(2, counts.Length);
-        Assert.Equal(5, counts[0]);
-        Assert.Equal(8, counts[1]);
+        Assert.Equal(AvailabilityTrend.Increasing, summary.Trend);
+        Assert.Equal(10, summary.DeltaBikes);
+        Assert.InRange(summary.WindowMinutes, 11, 13);
     }
 
     [Fact]
-    public void AppendLiveSnapshot_AddsNewStations()
+    public void GetTrendSummary_WithLive_WhenOnlyOneSnapshot_UsesSnapshotVsLive()
     {
-        var service = CreateServiceWithFetch(
-            """
+        var now = DateTime.UtcNow;
+        var tLast = now.AddMinutes(-20);
+        var json = $$"""
             {
               "intervalMinutes": 15,
-              "timestamps": ["2026-06-01T10:00:00Z"],
+              "timestamps": ["{{tLast:o}}"],
               "rows": [["001", 5]]
             }
-            """);
+            """;
+        var service = CreateServiceWithFetch(json);
 
-        service.AppendLiveSnapshot(new Dictionary<string, int> { ["001"] = 8, ["002"] = 3 });
+        var summary = service.GetTrendSummary("001", liveCount: 5, liveTimestamp: now);
 
-        Assert.Equal([5, 8], service.GetStationCounts("001"));
-        Assert.Equal([0, 3], service.GetStationCounts("002"));
+        Assert.Equal(AvailabilityTrend.Stable, summary.Trend);
+        Assert.Equal(0, summary.DeltaBikes);
+    }
+
+    [Fact]
+    public void GetTrendSummary_WithLive_WhenNoSnapshots_ReturnsStable()
+    {
+        var service = CreateServiceWithFetch(
+            """{"intervalMinutes":15,"timestamps":[],"rows":[]}""");
+
+        var summary = service.GetTrendSummary("001", liveCount: 8, liveTimestamp: DateTime.UtcNow);
+
+        Assert.Equal(new TrendSummary(AvailabilityTrend.Stable, 0, 0), summary);
+    }
+
+    [Fact]
+    public void GetTrendSummary_WithLive_WhenLiveCloseToLastSnapshot_ReturnsStableForSlowRate()
+    {
+        // Live within 10 min of last snapshot → falls back to S_prev vs live.
+        // Window ≈ 18 min, delta = 7 − 0 = 7, rate ≈ 0.39/min → below 0.5 threshold → Stable.
+        var now = DateTime.UtcNow;
+        var tPrev = now.AddMinutes(-18);
+        var tLast = now.AddMinutes(-3);
+        var json = $$"""
+            {
+              "intervalMinutes": 15,
+              "timestamps": ["{{tPrev:o}}", "{{tLast:o}}"],
+              "rows": [["001", 0, 5]]
+            }
+            """;
+        var service = CreateServiceWithFetch(json);
+
+        var summary = service.GetTrendSummary("001", liveCount: 7, liveTimestamp: now);
+
+        Assert.Equal(AvailabilityTrend.Stable, summary.Trend);
+        Assert.Equal(7, summary.DeltaBikes);
+        Assert.InRange(summary.WindowMinutes, 17, 19);
     }
 
     #endregion

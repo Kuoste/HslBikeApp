@@ -445,6 +445,7 @@ html, body {
 .snapshot-chart polyline.zone-red { stroke: #d32f2f; }
 
 .snapshot-chart .latest-dot { fill: var(--primary); }
+.snapshot-chart .live-dot { fill: #ff6d00; stroke: #fff; stroke-width: 1.5; }
 
 /* ===== Monthly stats ===== */
 .stats-toggle {

@@ -1,6 +1,6 @@
 @page "/"
 @inject AppState State
-@implements IDisposable
+@implements IAsyncDisposable
 @using System.Globalization
 
 <PageTitle>HSL City Bikes</PageTitle>
@@ -89,6 +89,8 @@
                         SnapshotCounts="@State.GetStationSnapshotCounts(State.SelectedStation.Id)"
                         Timestamps="@State.SnapshotTimestamps"
                         IsGap="@State.IsSnapshotGap"
+                        LiveCount="@State.GetLiveCount(State.SelectedStation.Id)"
+                        LiveTimestamp="@State.LiveTimestamp"
                         AllStations="@State.Stations"
                         OnClose="OnClosePanel"
                         OnToggleMonthlyStats="OnToggleMonthlyStats" />
@@ -150,7 +152,7 @@
     private static string FormatUtc(DateTime value) =>
         value.ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture);
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (_stateChangedHandler is not null)
             State.OnStateChanged -= _stateChangedHandler;

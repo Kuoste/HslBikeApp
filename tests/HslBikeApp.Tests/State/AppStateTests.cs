@@ -1,6 +1,7 @@
 using HslBikeApp.Models;
 using HslBikeApp.Services;
 using HslBikeApp.State;
+using Microsoft.JSInterop;
 using System.Net;
 using System.Text.Json;
 
@@ -10,26 +11,29 @@ public class AppStateTests
 {
     private static AppState CreateAppState(List<BikeStation>? stations = null)
     {
-        var stationHandler = new MockHttpHandler();
+        var liveHandler = new MockHttpHandler();
         if (stations is not null)
         {
             var stationJson = JsonSerializer.Serialize(stations, new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
-            stationHandler.SetResponse("/api/stations", stationJson);
+            liveHandler.SetResponse("/api/stations", stationJson);
         }
 
         var stationService = new StationService(
-            new HttpClient(stationHandler) { BaseAddress = new Uri("https://test.local/") },
+            new HttpClient(new MockHttpHandler()) { BaseAddress = new Uri("https://test.local/") },
             "https://test.local");
         var statisticsService = new StatisticsService(new HttpClient(new MockHttpHandler()), "https://test.local");
         var cycleLaneService = new CycleLaneService(new HttpClient(new MockHttpHandler()));
         var snapshotService = new SnapshotService(
             new HttpClient(new MockHttpHandler()) { BaseAddress = new Uri("https://test.local/") },
             "https://test.local");
+        var liveStationService = new LiveStationService(
+            new HttpClient(liveHandler) { BaseAddress = new Uri("https://test.local/") },
+            "https://test.local");
 
-        return new AppState(stationService, statisticsService, cycleLaneService, snapshotService);
+        return new AppState(stationService, statisticsService, cycleLaneService, snapshotService, liveStationService, new StubJsRuntime());
     }
 
     [Fact]
@@ -128,7 +132,7 @@ public class AppStateTests
     }
 
     [Fact]
-    public async Task LoadStationsAsync_PopulatesStations_FromAggregatorResponse()
+    public async Task RefreshLiveAsync_PopulatesStations_FromAggregatorResponse()
     {
         var stations = new List<BikeStation>
         {
@@ -147,7 +151,7 @@ public class AppStateTests
 
         var state = CreateAppState(stations: stations);
 
-        await state.LoadStationsAsync();
+        await state.RefreshLiveAsync();
 
         Assert.Single(state.Stations);
         Assert.Null(state.StationError);
@@ -156,11 +160,11 @@ public class AppStateTests
     }
 
     [Fact]
-    public async Task LoadStationsAsync_EmptyFeed_SetsStatusMessage()
+    public async Task RefreshLiveAsync_EmptyFeed_SetsStatusMessage()
     {
         var state = CreateAppState(stations: []);
 
-        await state.LoadStationsAsync();
+        await state.RefreshLiveAsync();
 
         Assert.Empty(state.Stations);
         Assert.Null(state.StationError);
@@ -168,11 +172,11 @@ public class AppStateTests
     }
 
     [Fact]
-    public async Task LoadStationsAsync_WhenStationEndpointFails_SetsStationError()
+    public async Task RefreshLiveAsync_WhenStationEndpointFails_SetsStationError()
     {
         var state = CreateAppState();
 
-        await state.LoadStationsAsync();
+        await state.RefreshLiveAsync();
 
         Assert.NotNull(state.StationError);
         Assert.Null(state.StationStatusMessage);
@@ -180,7 +184,7 @@ public class AppStateTests
     }
 
     [Fact]
-    public async Task LoadStationsAsync_WhenStationEndpointFails_PreservesExistingStations()
+    public async Task RefreshLiveAsync_WhenStationEndpointFails_PreservesExistingStations()
     {
         var state = CreateAppState();
         var existingStations = new List<BikeStation>
@@ -189,10 +193,20 @@ public class AppStateTests
         };
         typeof(AppState).GetProperty("Stations")!.SetValue(state, existingStations);
 
-        await state.LoadStationsAsync();
+        await state.RefreshLiveAsync();
 
         Assert.Single(state.Stations);
         Assert.Equal("Kaivopuisto", state.Stations[0].Name);
+    }
+
+    /// <summary>No-op IJSRuntime for unit tests that avoids real JS calls.</summary>
+    private sealed class StubJsRuntime : IJSRuntime
+    {
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+            => ValueTask.FromResult(default(TValue)!);
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
+            => ValueTask.FromResult(default(TValue)!);
     }
 
     /// Simple HttpMessageHandler mock for tests
