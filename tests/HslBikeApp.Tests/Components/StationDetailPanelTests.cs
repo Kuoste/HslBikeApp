@@ -5,7 +5,7 @@ using System.Globalization;
 
 namespace HslBikeApp.Tests.Components;
 
-public class StationDetailPanelTests : TestContext
+public class StationDetailPanelTests : BunitContext
 {
     [Fact]
     public void RendersTrendChipWithTooltip_WhenTrendIsIncreasing()
@@ -22,7 +22,7 @@ public class StationDetailPanelTests : TestContext
             IsActive = true
         };
 
-        var component = RenderComponent<StationDetailPanel>(parameters => parameters
+        var component = Render<StationDetailPanel>(parameters => parameters
             .Add(panel => panel.Station, station)
             .Add(panel => panel.Trend, AvailabilityTrend.Increasing)
             .Add(panel => panel.TrendSummary, new TrendSummary(AvailabilityTrend.Increasing, 2, 5))
@@ -51,7 +51,7 @@ public class StationDetailPanelTests : TestContext
             IsActive = true
         };
 
-        var component = RenderComponent<StationDetailPanel>(parameters => parameters
+        var component = Render<StationDetailPanel>(parameters => parameters
             .Add(panel => panel.Station, station)
             .Add(panel => panel.Trend, AvailabilityTrend.Stable)
             .Add(panel => panel.TrendSummary, new TrendSummary(AvailabilityTrend.Stable, 0, 5))
@@ -78,7 +78,7 @@ public class StationDetailPanelTests : TestContext
             IsActive = true
         };
 
-        var component = RenderComponent<StationDetailPanel>(parameters => parameters
+        var component = Render<StationDetailPanel>(parameters => parameters
             .Add(panel => panel.Station, station)
             .Add(panel => panel.Trend, AvailabilityTrend.Stable)
             .Add(panel => panel.TrendSummary, new TrendSummary(AvailabilityTrend.Stable, 0, 15))
@@ -108,7 +108,7 @@ public class StationDetailPanelTests : TestContext
             IsActive = true
         };
 
-        var component = RenderComponent<StationDetailPanel>(parameters => parameters
+        var component = Render<StationDetailPanel>(parameters => parameters
             .Add(panel => panel.Station, station)
             .Add(panel => panel.Trend, AvailabilityTrend.Stable)
             .Add(panel => panel.TrendSummary, new TrendSummary(AvailabilityTrend.Stable, 0, 42))
@@ -139,7 +139,7 @@ public class StationDetailPanelTests : TestContext
             IsActive = true
         };
 
-        var component = RenderComponent<StationDetailPanel>(parameters => parameters
+        var component = Render<StationDetailPanel>(parameters => parameters
             .Add(panel => panel.Station, station)
             .Add(panel => panel.Trend, AvailabilityTrend.Stable)
             .Add(panel => panel.TrendSummary, new TrendSummary(AvailabilityTrend.Stable, 0, 5))
@@ -147,7 +147,7 @@ public class StationDetailPanelTests : TestContext
             .Add(panel => panel.Timestamps, new[] { now.AddMinutes(-15), now }));
 
         Assert.Contains("Availability", component.Find(".availability-card h4").TextContent);
-        Assert.Empty(component.FindAll(".detail-card h4").Where(heading => heading.TextContent.Contains("Availability History", StringComparison.Ordinal)));
+        Assert.DoesNotContain(component.FindAll(".detail-card h4"), heading => heading.TextContent.Contains("Availability History", StringComparison.Ordinal));
         Assert.DoesNotContain("Last ", component.Markup);
     }
 }

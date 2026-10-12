@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using HslBikeApp.Models;
 
 namespace HslBikeApp.Services;
@@ -13,6 +14,9 @@ public class LiveStationService
     private readonly string _baseUrl;
 
     public DateTime? LiveTimestamp { get; private set; }
+
+    /// <summary>Whether the most recent <see cref="RefreshAsync"/> call reached the backend successfully.</summary>
+    public bool LastRefreshSucceeded { get; private set; }
     public IReadOnlyDictionary<string, int> LiveCounts { get; private set; } =
         new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
@@ -24,11 +28,14 @@ public class LiveStationService
 
     /// <summary>
     /// Calls GET /api/stations and updates <see cref="LiveTimestamp"/> and <see cref="LiveCounts"/> atomically.
-    /// Keeps previous state on <see cref="HttpRequestException"/> to avoid UI flicker.
-    /// Returns the fetched stations, or an empty list on failure.
+    /// Keeps previous state on failure (HTTP error, timeout or invalid JSON) to avoid UI flicker.
+    /// Returns the fetched stations, or an empty list on failure; check <see cref="LastRefreshSucceeded"/>
+    /// to tell a failure apart from an empty feed.
     /// </summary>
     public async Task<IReadOnlyList<BikeStation>> RefreshAsync()
     {
+        LastRefreshSucceeded = false;
+
         try
         {
             var stations = await _http.GetFromJsonAsync<List<BikeStation>>($"{_baseUrl}/api/stations")
@@ -38,10 +45,11 @@ public class LiveStationService
                 .Where(s => s.IsActive)
                 .ToDictionary(s => s.Id, s => s.BikesAvailable, StringComparer.OrdinalIgnoreCase);
             LiveTimestamp = DateTime.UtcNow;
+            LastRefreshSucceeded = true;
 
             return stations;
         }
-        catch (HttpRequestException)
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
             return [];
         }

@@ -86,6 +86,41 @@ public class SnapshotServiceTests
         Assert.Null(result);
     }
 
+    [Theory]
+    [InlineData("timeout")]
+    [InlineData("invalid-json")]
+    public async Task FetchSnapshotsAsync_WhenLaterFetchFails_ReturnsNullAndKeepsPreviousData(string failure)
+    {
+        var callCount = 0;
+        var httpClient = new HttpClient(new StubHttpMessageHandler((_, _) =>
+        {
+            if (Interlocked.Increment(ref callCount) == 1)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        """{"intervalMinutes":15,"timestamps":["2026-06-01T10:00:00Z"],"rows":[["001",5]]}""",
+                        Encoding.UTF8, "application/json")
+                });
+            }
+
+            if (failure == "timeout")
+                throw new TaskCanceledException("The request was cancelled due to the configured HttpClient.Timeout.");
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("<html>not json</html>", Encoding.UTF8, "application/json")
+            });
+        }));
+        var service = new SnapshotService(httpClient, "https://aggregator.example");
+        await service.FetchSnapshotsAsync();
+
+        var result = await service.FetchSnapshotsAsync();
+
+        Assert.Null(result);
+        Assert.Equal([5], service.GetStationCounts("001"));
+    }
+
     [Fact]
     public void LatestSnapshotTimestamp_WhenFetched_ReturnsLastTimestamp()
     {

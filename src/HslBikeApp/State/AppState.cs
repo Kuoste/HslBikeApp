@@ -20,6 +20,15 @@ public class AppState : IAsyncDisposable
     private const int SnapshotRetrySeconds = 30;
     private const int OpenDataPollIntervalMs = 10 * 60 * 1000;
 
+    // The backend scales to zero, so the first request of a visit often hits a cold start.
+    // Retry the initial live load quickly rather than waiting for the regular poll.
+    internal IReadOnlyList<TimeSpan> InitialLiveRetryDelays { get; set; } =
+        [TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10)];
+
+    internal const string LoadingStationsMessage = "Loading bike stations…";
+    internal const string WakingUpMessage = "Waking up the bike data service – retrying…";
+    private const string StationLoadErrorMessage = "Could not load live bike stations from the aggregator backend.";
+
     private Timer? _livePollTimer;
     private Timer? _snapshotRefreshTimer;
     private Timer? _openDataPollTimer;
@@ -94,16 +103,50 @@ public class AppState : IAsyncDisposable
 
     public async Task InitAsync()
     {
-        await _snapshotService.FetchSnapshotsAsync();
-        await RefreshLiveAsync();
-        ScheduleNextSnapshotRefresh();
-        StartLivePoll();
-
+        // Stations are what the user is waiting for; snapshots and open data only add
+        // trend badges and extra markers, so fetch them in parallel instead of first.
+        var snapshotTask = LoadInitialSnapshotsAsync();
         _ = RefreshOpenDataAsync();
         StartOpenDataPoll();
 
+        await LoadInitialStationsAsync();
+        StartLivePoll();
+
+        await snapshotTask;
+
         _dotNetRef = DotNetObjectReference.Create(this);
         await _js.InvokeVoidAsync("VisibilityInterop.register", _dotNetRef);
+    }
+
+    /// <summary>
+    /// Loads live stations for the first time, retrying with a short backoff while the
+    /// backend wakes up. Only the final failed attempt is reported as an error.
+    /// </summary>
+    private async Task LoadInitialStationsAsync()
+    {
+        for (var attempt = 0; attempt <= InitialLiveRetryDelays.Count; attempt++)
+        {
+            var isLastAttempt = attempt == InitialLiveRetryDelays.Count;
+            var pendingMessage = attempt == 0 ? LoadingStationsMessage : WakingUpMessage;
+
+            if (await RefreshLiveCoreAsync(pendingMessage, reportFailure: isLastAttempt))
+                return;
+
+            if (!isLastAttempt)
+                await Task.Delay(InitialLiveRetryDelays[attempt]);
+        }
+    }
+
+    private async Task LoadInitialSnapshotsAsync()
+    {
+        var timeSeries = await _snapshotService.FetchSnapshotsAsync();
+
+        if (timeSeries is null)
+            ScheduleSnapshotRefreshIn(TimeSpan.FromSeconds(SnapshotRetrySeconds));
+        else
+            ScheduleNextSnapshotRefresh();
+
+        NotifyStateChanged();
     }
 
     /// <summary>Refreshes open data from <c>GET /api/open-data</c>.</summary>
@@ -175,11 +218,19 @@ public class AppState : IAsyncDisposable
     }
 
     /// <summary>Refreshes live station data from <c>GET /api/stations</c>.</summary>
-    public async Task RefreshLiveAsync()
+    public async Task RefreshLiveAsync() =>
+        await RefreshLiveCoreAsync(pendingMessage: null, reportFailure: true);
+
+    /// <summary>
+    /// Fetches live stations. On failure the existing stations are kept; when
+    /// <paramref name="reportFailure"/> is <c>false</c> a "waking up" status is shown instead of an error.
+    /// Returns whether the fetch succeeded.
+    /// </summary>
+    private async Task<bool> RefreshLiveCoreAsync(string? pendingMessage, bool reportFailure)
     {
         IsLoadingStations = true;
         StationError = null;
-        StationStatusMessage = null;
+        StationStatusMessage = pendingMessage;
         NotifyStateChanged();
 
         try
@@ -187,12 +238,13 @@ public class AppState : IAsyncDisposable
             var previous = Stations.ToDictionary(station => station.Id, station => station.BikesAvailable);
             var latestStations = await _liveStationService.RefreshAsync();
 
-            if (latestStations.Count == 0 && _liveStationService.LiveTimestamp is null)
+            if (!_liveStationService.LastRefreshSucceeded)
             {
-                StationError = "Could not load live bike stations from the aggregator backend.";
-                return;
+                ReportStationFailure(StationLoadErrorMessage, reportFailure);
+                return false;
             }
 
+            StationStatusMessage = null;
             Stations = [.. latestStations];
             LatestLiveDataRetrievedAtUtc = _liveStationService.LiveTimestamp;
 
@@ -210,15 +262,31 @@ public class AppState : IAsyncDisposable
                         BikeChanges[station.Id] = station.BikesAvailable - previousCount;
                 }
             }
+
+            return true;
         }
         catch (Exception exception)
         {
-            StationError = $"Could not load live bike stations from the aggregator backend. {exception.Message}";
+            ReportStationFailure($"{StationLoadErrorMessage} {exception.Message}", reportFailure);
+            return false;
         }
         finally
         {
             IsLoadingStations = false;
             NotifyStateChanged();
+        }
+    }
+
+    private void ReportStationFailure(string errorMessage, bool reportFailure)
+    {
+        if (reportFailure)
+        {
+            StationStatusMessage = null;
+            StationError = errorMessage;
+        }
+        else
+        {
+            StationStatusMessage = WakingUpMessage;
         }
     }
 
