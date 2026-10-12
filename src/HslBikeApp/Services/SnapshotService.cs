@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using HslBikeApp.Models;
 
 namespace HslBikeApp.Services;
@@ -24,7 +25,8 @@ public class SnapshotService
 
     /// <summary>
     /// Fetches the columnar snapshot time-series from the aggregator.
-    /// Returns the parsed <see cref="SnapshotTimeSeries"/> or <c>null</c> on failure.
+    /// Returns the parsed <see cref="SnapshotTimeSeries"/> or <c>null</c> on failure
+    /// (HTTP error, timeout or invalid JSON); previously loaded data is kept.
     /// </summary>
     public async Task<SnapshotTimeSeries?> FetchSnapshotsAsync()
     {
@@ -39,7 +41,7 @@ public class SnapshotService
             _stationSeries = timeSeries.ParseRows();
             return timeSeries;
         }
-        catch (HttpRequestException)
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
             return null;
         }

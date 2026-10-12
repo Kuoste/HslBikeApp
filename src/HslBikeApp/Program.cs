@@ -14,7 +14,7 @@ var aggregatorBaseUrl = config["AggregatorBaseUrl"];
 if (string.IsNullOrWhiteSpace(aggregatorBaseUrl))
     aggregatorBaseUrl = "https://kuoste.github.io/hsl-bike-data-aggregator";
 
-var httpClientWithHeaders = new HttpClient(new AppSourceHeaderHandler());
+var httpClientWithHeaders = AggregatorHttpClient.Create();
 var plainHttpClient = new HttpClient();
 
 builder.Services.AddSingleton(new StationService(httpClientWithHeaders, aggregatorBaseUrl));

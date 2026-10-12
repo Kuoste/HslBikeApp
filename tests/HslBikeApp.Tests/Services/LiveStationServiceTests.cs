@@ -114,7 +114,48 @@ public class LiveStationServiceTests
 
         Assert.Empty(stations);
         Assert.NotNull(service.LiveTimestamp);
+        Assert.True(service.LastRefreshSucceeded);
     }
+
+    [Theory]
+    [InlineData("timeout")]
+    [InlineData("network")]
+    [InlineData("server-error")]
+    [InlineData("invalid-json")]
+    public async Task RefreshAsync_WhenLaterRefreshFails_ReportsFailureAndKeepsPreviousState(string failure)
+    {
+        var callCount = 0;
+        var httpClient = new HttpClient(new StubHttpMessageHandler((_, _) =>
+        {
+            if (Interlocked.Increment(ref callCount) == 1)
+                return Task.FromResult(JsonResponse(
+                    "[{\"id\":\"001\",\"name\":\"A\",\"lat\":0,\"lon\":0,\"capacity\":10," +
+                    "\"bikesAvailable\":5,\"spacesAvailable\":5,\"isActive\":true}]"));
+
+            return failure switch
+            {
+                "timeout" => throw new TaskCanceledException("The request was cancelled due to the configured HttpClient.Timeout."),
+                "network" => throw new HttpRequestException("network error"),
+                "server-error" => Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)),
+                _ => Task.FromResult(JsonResponse("<html>not json</html>"))
+            };
+        }));
+        var service = new LiveStationService(httpClient, "https://aggregator.example");
+
+        await service.RefreshAsync();
+        var timestampAfterFirstRefresh = service.LiveTimestamp;
+        Assert.True(service.LastRefreshSucceeded);
+
+        var result = await service.RefreshAsync();
+
+        Assert.Empty(result);
+        Assert.False(service.LastRefreshSucceeded);
+        Assert.Equal(timestampAfterFirstRefresh, service.LiveTimestamp);
+        Assert.Equal(5, service.GetLiveCount("001"));
+    }
+
+    private static HttpResponseMessage JsonResponse(string json) =>
+        new(HttpStatusCode.OK) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
 
     #endregion
 
