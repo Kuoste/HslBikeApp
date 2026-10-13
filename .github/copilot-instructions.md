@@ -8,7 +8,7 @@ Helsinki city bike availability app. Two repositories form the full system:
 
 | Repo | Role | Tech | Hosting |
 |---|---|---|---|
-| **HslBikeApp** (this repo) | Blazor WASM frontend | .NET 10, Blazor WebAssembly, Leaflet.js | GitHub Pages (tmikuoste.github.io/HslBikeApp/) |
+| **HslBikeApp** (this repo) | Blazor WASM frontend | .NET 10, Blazor WebAssembly, Leaflet.js | GitHub Pages (kuoste.github.io/HslBikeApp/) |
 | **HslBikeDataAggregator** | REST backend service | .NET 10, Azure Functions (isolated worker) | Interchangeable — currently Azure Functions |
 
 ## Architecture

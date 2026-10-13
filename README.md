@@ -20,7 +20,7 @@ A Blazor WebAssembly app showing real-time Helsinki city bike station availabili
 
 - **Blazor WebAssembly** — standalone, hosted as static files on GitHub Pages
 - **Leaflet.js** — raw JS interop for map rendering (OSM tiles)
-- **HslBikeDataAggregator** — REST backend ([separate repo](https://github.com/TmiKuoste/HslBikeDataAggregator)); provides stations, snapshots, hourly availability profiles, and popular destinations
+- **HslBikeDataAggregator** — REST backend ([separate repo](https://github.com/Kuoste/HslBikeDataAggregator)); provides stations, snapshots, hourly availability profiles, and popular destinations
 - **GitHub Actions** — CI/CD
 
 All data flows through a single configurable REST backend (`AggregatorBaseUrl` in `wwwroot/appsettings.json`). The frontend never calls upstream data sources directly. See [`docs/adr/001-azure-functions-backend.md`](docs/adr/001-azure-functions-backend.md) for backend rationale.
