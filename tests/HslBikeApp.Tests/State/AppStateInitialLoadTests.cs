@@ -142,6 +142,25 @@ public class AppStateInitialLoadTests
         Assert.Null(state.StationStatusMessage);
     }
 
+    [Fact]
+    public async Task InitAsync_WhenNoBackendIsConfigured_ShowsOfflineNoticeWithoutCallingBackend()
+    {
+        var requests = 0;
+        await using var state = CreateAppState(request =>
+        {
+            Interlocked.Increment(ref requests);
+            return Task.FromResult(Route(request));
+        }, baseUrl: "");
+
+        await state.InitAsync();
+        await state.RefreshNowAsync();
+
+        Assert.Equal(0, requests);
+        Assert.Empty(state.Stations);
+        Assert.Null(state.StationError);
+        Assert.Equal(AppState.BackendOfflineMessage, state.StationStatusMessage);
+    }
+
     private static HttpResponseMessage Route(HttpRequestMessage request)
     {
         var path = request.RequestUri!.AbsolutePath;
@@ -154,9 +173,10 @@ public class AppStateInitialLoadTests
     private static HttpResponseMessage Json(string json) =>
         new(HttpStatusCode.OK) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
 
-    private static AppState CreateAppState(Func<HttpRequestMessage, Task<HttpResponseMessage>> handler)
+    private static AppState CreateAppState(
+        Func<HttpRequestMessage, Task<HttpResponseMessage>> handler,
+        string baseUrl = "https://test.local")
     {
-        const string baseUrl = "https://test.local";
         var httpClient = new HttpClient(new StubHttpMessageHandler((request, _) => handler(request)));
 
         return new AppState(

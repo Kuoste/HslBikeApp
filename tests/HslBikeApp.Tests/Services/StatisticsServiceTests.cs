@@ -95,9 +95,11 @@ public class StatisticsServiceTests
     }
 
     [Fact]
-    public void Constructor_WhenBaseUrlIsEmpty_ThrowsArgumentException()
+    public void Constructor_WhenBaseUrlIsEmpty_AllowsOfflineMode()
     {
-        Assert.Throws<ArgumentException>(() => new StatisticsService(new HttpClient(), ""));
+        var exception = Record.Exception(() => new StatisticsService(new HttpClient(), ""));
+
+        Assert.Null(exception);
     }
 
     [Fact]

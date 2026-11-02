@@ -27,6 +27,7 @@ public class AppState : IAsyncDisposable
 
     internal const string LoadingStationsMessage = "Loading bike stations…";
     internal const string WakingUpMessage = "Waking up the bike data service – retrying…";
+    internal const string BackendOfflineMessage = "The bike data service is offline for the off-season. Live availability will return when the HSL city bike season starts again.";
     private const string StationLoadErrorMessage = "Could not load live bike stations from the aggregator backend.";
 
     private Timer? _livePollTimer;
@@ -103,6 +104,14 @@ public class AppState : IAsyncDisposable
 
     public async Task InitAsync()
     {
+        // With no backend configured there is nothing to fetch or poll; the map and cycle lanes still work.
+        if (!_liveStationService.IsBackendConfigured)
+        {
+            StationStatusMessage = BackendOfflineMessage;
+            NotifyStateChanged();
+            return;
+        }
+
         // Stations are what the user is waiting for; snapshots and open data only add
         // trend badges and extra markers, so fetch them in parallel instead of first.
         var snapshotTask = LoadInitialSnapshotsAsync();
@@ -442,6 +451,7 @@ public class AppState : IAsyncDisposable
 
     public async Task RefreshNowAsync()
     {
+        if (!_liveStationService.IsBackendConfigured) return;
         await RefreshLiveAsync();
     }
 

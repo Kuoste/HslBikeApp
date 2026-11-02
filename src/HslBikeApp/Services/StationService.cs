@@ -18,7 +18,8 @@ public class StationService
     {
         ArgumentNullException.ThrowIfNull(http);
 
-        if (string.IsNullOrWhiteSpace(baseUrl))
+        // An empty URL is allowed: it means no backend is running and AppState shows an offline notice.
+        if (baseUrl is null)
             throw new ArgumentException("Aggregator base URL must be configured.", nameof(baseUrl));
 
         _http = http;
