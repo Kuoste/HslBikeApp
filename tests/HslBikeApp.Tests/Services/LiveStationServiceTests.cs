@@ -16,6 +16,21 @@ public class LiveStationServiceTests
         return new LiveStationService(httpClient, "https://aggregator.example");
     }
 
+    #region IsBackendConfigured
+
+    [Theory]
+    [InlineData("https://aggregator.example", true)]
+    [InlineData("", false)]
+    [InlineData("   ", false)]
+    public void IsBackendConfigured_ReflectsWhetherBaseUrlIsSet(string baseUrl, bool expected)
+    {
+        var service = new LiveStationService(new HttpClient(), baseUrl);
+
+        Assert.Equal(expected, service.IsBackendConfigured);
+    }
+
+    #endregion
+
     #region RefreshAsync
 
     [Fact]

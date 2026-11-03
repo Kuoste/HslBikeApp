@@ -15,6 +15,9 @@ public class LiveStationService
 
     public DateTime? LiveTimestamp { get; private set; }
 
+    /// <summary>Whether a backend base URL is configured. An empty URL means the backend is offline.</summary>
+    public bool IsBackendConfigured => !string.IsNullOrWhiteSpace(_baseUrl);
+
     /// <summary>Whether the most recent <see cref="RefreshAsync"/> call reached the backend successfully.</summary>
     public bool LastRefreshSucceeded { get; private set; }
     public IReadOnlyDictionary<string, int> LiveCounts { get; private set; } =

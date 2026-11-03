@@ -4,6 +4,8 @@ A Blazor WebAssembly app showing real-time Helsinki city bike station availabili
 
 **Live:** https://kuoste.github.io/HslBikeApp/
 
+> **Off-season (winter 2026–27):** the 2026 bike season is over and the Azure-hosted backend has been removed. The site still loads the map and cycle lane overlay, but shows an off-season notice instead of live station data. For the 2027 season the backend is planned to run on a self-hosted server instead of Azure.
+
 ## Features
 
 - Real-time bike station availability
@@ -23,7 +25,9 @@ A Blazor WebAssembly app showing real-time Helsinki city bike station availabili
 - **HslBikeDataAggregator** — REST backend ([separate repo](https://github.com/Kuoste/HslBikeDataAggregator)); provides stations, snapshots, hourly availability profiles, and popular destinations
 - **GitHub Actions** — CI/CD
 
-All data flows through a single configurable REST backend (`AggregatorBaseUrl` in `wwwroot/appsettings.json`). The frontend never calls upstream data sources directly. See [`docs/adr/001-azure-functions-backend.md`](docs/adr/001-azure-functions-backend.md) for backend rationale.
+All data flows through a single configurable REST backend (`AggregatorBaseUrl` in `wwwroot/appsettings.json`). The frontend never calls upstream data sources directly. The backend is interchangeable: any server implementing the same REST contract can be used. See [`docs/adr/001-azure-functions-backend.md`](docs/adr/001-azure-functions-backend.md) for the original (2026 season) Azure backend rationale.
+
+Leaving `AggregatorBaseUrl` empty puts the app in offline mode: it makes no backend requests and shows an off-season notice. This is the current setting on GitHub Pages.
 
 ### Data flow
 
@@ -55,6 +59,8 @@ Page load ──► REST backend (AggregatorBaseUrl)
 ## Seasonal behaviour
 
 HSL city bikes are seasonal. Outside the operating season, the upstream live station feed can legitimately return zero active stations. When that happens, the app shows an explicit status message instead of leaving the map blank without explanation.
+
+When no backend is running at all (an empty `AggregatorBaseUrl`), the app shows an off-season notice instead. To bring the site back for a new season, set `AggregatorBaseUrl` in `src/HslBikeApp/wwwroot/appsettings.json` to the backend's public URL (the backend must allow `https://kuoste.github.io` as a CORS origin) and push to `main`.
 
 ## Data Sources and Attribution
 

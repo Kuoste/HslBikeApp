@@ -19,9 +19,11 @@ public class ServiceConfigurationTests
     }
 
     [Fact]
-    public void StationService_WhenBaseUrlIsEmpty_ThrowsArgumentException()
+    public void StationService_WhenBaseUrlIsEmpty_AllowsOfflineMode()
     {
-        Assert.Throws<ArgumentException>(() => new StationService(SharedHttp, ""));
+        var exception = Record.Exception(() => new StationService(SharedHttp, ""));
+
+        Assert.Null(exception);
     }
 
     [Fact]

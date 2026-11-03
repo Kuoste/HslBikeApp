@@ -9,7 +9,7 @@ Helsinki city bike availability app. Two repositories form the full system:
 | Repo | Role | Tech | Hosting |
 |---|---|---|---|
 | **HslBikeApp** (this repo) | Blazor WASM frontend | .NET 10, Blazor WebAssembly, Leaflet.js | GitHub Pages (kuoste.github.io/HslBikeApp/) |
-| **HslBikeDataAggregator** | REST backend service | .NET 10, Azure Functions (isolated worker) | Interchangeable — currently Azure Functions |
+| **HslBikeDataAggregator** | REST backend service | .NET 10, Azure Functions (isolated worker) | Interchangeable — Azure deployment removed after the 2026 season; planned to move to a self-hosted server for 2027 |
 
 ## Architecture
 
@@ -28,7 +28,8 @@ Helsinki city bike availability app. Two repositories form the full system:
 
 - The frontend **never** calls HSL APIs directly — all data flows through the REST backend.
 - The backend base URL is configured via AggregatorBaseUrl in wwwroot/appsettings.json. The backend is interchangeable: any REST API implementing the same contract can be used.
-- The current backend implementation (HslBikeDataAggregator) uses write/read separation: a timer polls HSL and writes to blob storage; HTTP functions read from blob for sub-second responses. See docs/adr/001-azure-functions-backend.md for rationale.
+- An empty AggregatorBaseUrl means no backend is running (off-season): AppState makes no backend requests and shows an off-season notice. This is the current setting since the Azure backend was removed in November 2026.
+- The 2026 backend implementation (HslBikeDataAggregator) used write/read separation: a timer polls HSL and writes to blob storage; HTTP functions read from blob for sub-second responses. See docs/adr/001-azure-functions-backend.md for rationale.
 
 ## API Contract (HslBikeDataAggregator endpoints)
 

@@ -38,6 +38,16 @@ public class IndexHtmlTests
         Assert.DoesNotContain("azurewebsites.net", IndexHtml);
     }
 
+    [Fact]
+    public void AppSettings_DoesNotPointAtRemovedAzureBackend()
+    {
+        var appSettings = File.ReadAllText(
+            Path.Combine(FindRepositoryRoot(), "src", "HslBikeApp", "wwwroot", "appsettings.json"));
+
+        Assert.DoesNotContain("azure-api.net", appSettings);
+        Assert.DoesNotContain("azurewebsites.net", appSettings);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

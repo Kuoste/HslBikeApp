@@ -10,9 +10,8 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 var config = builder.Configuration;
-var aggregatorBaseUrl = config["AggregatorBaseUrl"];
-if (string.IsNullOrWhiteSpace(aggregatorBaseUrl))
-    aggregatorBaseUrl = "https://kuoste.github.io/hsl-bike-data-aggregator";
+// An empty AggregatorBaseUrl means no backend is running (e.g. off-season); AppState then shows a notice.
+var aggregatorBaseUrl = config["AggregatorBaseUrl"] ?? "";
 
 var httpClientWithHeaders = AggregatorHttpClient.Create();
 var plainHttpClient = new HttpClient();
